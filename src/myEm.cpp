@@ -205,6 +205,9 @@ Psi mem(const MatrixXd& y, const Psi& psi, double lambda) {
 
 // Creates a matrix of w_ik values.
 MatrixXd wMatrix(const MatrixXd& y, const Psi& psi) {
+  K = psi.theta.cols();  // Number of mixture components. 
+  n = y.rows();      // Sample size.
+  
   MatrixXd result(n, K);
   double acc;
 
@@ -224,6 +227,10 @@ MatrixXd wMatrix(const MatrixXd& y, const Psi& psi) {
 
 // M-Step of the Modified EM Algorithm.
 Psi mStep(const MatrixXd& y, const Psi& psi, const MatrixXd& wMtx, double lambda) {
+  K = psi.theta.cols();  // Number of mixture components. 
+  N = y.cols();      // Dimension of the sample space. 
+  n = y.rows();      // Sample size.
+  
   Psi result;
   int i, k;
   result.pii = VectorXd::Zero(K);
@@ -282,6 +289,9 @@ Psi mStep(const MatrixXd& y, const Psi& psi, const MatrixXd& wMtx, double lambda
 
 // Proximal Gradient Descent Algorithm. 
 MatrixXd pgd(const MatrixXd& y, const Psi& psi, const MatrixXd& wMtx, double lambda){
+  K = psi.theta.cols();  // Number of mixture components. 
+  D = theta.rows();  // Dimension of the parameter space.
+
   int k, counter = 0, restartCounter;
   double u;
   MatrixXd newEta = MatrixXd::Zero(D, K), 
@@ -371,6 +381,9 @@ MatrixXd pgd(const MatrixXd& y, const Psi& psi, const MatrixXd& wMtx, double lam
 
 // Learning the tuning parameter u.
 bool uCheck(double u, const MatrixXd& y, const MatrixXd& oldEta, const MatrixXd& newEta, const MatrixXd& sigma, const VectorXd& wMtxSums) {
+  K = oldEta.cols();  // Number of mixture components. 
+  D = oldEta.rows();  // Dimension of the parameter space.
+  
   double t1 = 0.0, t2 = 0.0;
   MatrixXd grad(D, K);
 
@@ -390,6 +403,9 @@ bool uCheck(double u, const MatrixXd& y, const MatrixXd& oldEta, const MatrixXd&
 
 // Log-likelihood function. 
 double fullLogLikFunction(const MatrixXd& y, const MatrixXd& theta, const VectorXd& pii, const MatrixXd& sigma){
+  K = theta.cols();  // Number of mixture components. 
+  n = y.rows();      // Sample size.
+  
   double temp, loglikSum = 0.0;
 
   for (int i = 0; i < n; i++) {
@@ -410,6 +426,8 @@ double logLikFunction(const MatrixXd& y, const Psi& psi){
 }
 
 Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const VectorXd& lambdaList){
+  K = startingVals.theta.cols();  // Number of mixture components. 
+  
   Psi psi = startingVals, minPsi;
   int i, k;
   MatrixXd transfTheta;
