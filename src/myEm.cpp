@@ -9,6 +9,7 @@ bool arbSigma, verbose;
 MatrixXd upTransf, invEtaTransf, ones, transformedData;
 std::vector<MatrixXd> yOuterProd; 
 VectorXd lambdaVals, adaptiveLassoWeights;
+ 
 
 MatrixXd (*gradB)(const MatrixXd&, const MatrixXd&);
 double   (*b)(const VectorXd&, const MatrixXd&);
