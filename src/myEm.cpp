@@ -28,7 +28,7 @@ MatrixXd pgd(const MatrixXd&, const Psi&, const MatrixXd&, double lambda) ;
 bool uCheck(double u, const MatrixXd& y, const MatrixXd& oldEta, const MatrixXd& newEta, const MatrixXd& sigma, const VectorXd& wMtxSums);
 
 // [[Rcpp::export(.myEm)]]
-extern "C" Rcpp::List myEm(SEXP argY, SEXP argTheta, SEXP argSigma, 
+Rcpp::List myEm(SEXP argY, SEXP argTheta, SEXP argSigma, 
                            SEXP argPii, SEXP argArbSigma, SEXP argM, 
                            SEXP argIndex, SEXP argCk, SEXP argA, 
                            SEXP argPenalty, SEXP argLambdaVals, SEXP argEpsilon, 
@@ -290,7 +290,7 @@ Psi mStep(const MatrixXd& y, const Psi& psi, const MatrixXd& wMtx, double lambda
 // Proximal Gradient Descent Algorithm. 
 MatrixXd pgd(const MatrixXd& y, const Psi& psi, const MatrixXd& wMtx, double lambda){
   K = psi.theta.cols();  // Number of mixture components. 
-  D = theta.rows();  // Dimension of the parameter space.
+  D = psi.theta.rows();  // Dimension of the parameter space.
 
   int k, counter = 0, restartCounter;
   double u;
