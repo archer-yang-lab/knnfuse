@@ -16,5 +16,5 @@
 #'  Manole, T., Khalili, A. 2019. "Estimating the Number of Components in Finite Mixture Models 
 #'  via the Group-Sort-Fuse Procedure".
 #' 
-#' @name GroupSortFuse-package
+#' @name GroupSortFuse2-package
 NULL

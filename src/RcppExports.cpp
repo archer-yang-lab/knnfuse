@@ -6,9 +6,14 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // bicLogLik
 extern "C" SEXP bicLogLik(SEXP argY, SEXP argTheta, SEXP argPii, SEXP argSigma, SEXP argIndex);
-RcppExport SEXP _GroupSortFuse_bicLogLik(SEXP argYSEXP, SEXP argThetaSEXP, SEXP argPiiSEXP, SEXP argSigmaSEXP, SEXP argIndexSEXP) {
+RcppExport SEXP _GroupSortFuse2_bicLogLik(SEXP argYSEXP, SEXP argThetaSEXP, SEXP argPiiSEXP, SEXP argSigmaSEXP, SEXP argIndexSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -23,7 +28,7 @@ END_RCPP
 }
 // myEm
 extern "C" Rcpp::List myEm(SEXP argY, SEXP argTheta, SEXP argSigma, SEXP argPii, SEXP argArbSigma, SEXP argM, SEXP argIndex, SEXP argCk, SEXP argA, SEXP argPenalty, SEXP argLambdaVals, SEXP argEpsilon, SEXP argDelta, SEXP argMaxRep, SEXP argMaxPgd, SEXP argUBound, SEXP argVerbose, SEXP argH);
-RcppExport SEXP _GroupSortFuse_myEm(SEXP argYSEXP, SEXP argThetaSEXP, SEXP argSigmaSEXP, SEXP argPiiSEXP, SEXP argArbSigmaSEXP, SEXP argMSEXP, SEXP argIndexSEXP, SEXP argCkSEXP, SEXP argASEXP, SEXP argPenaltySEXP, SEXP argLambdaValsSEXP, SEXP argEpsilonSEXP, SEXP argDeltaSEXP, SEXP argMaxRepSEXP, SEXP argMaxPgdSEXP, SEXP argUBoundSEXP, SEXP argVerboseSEXP, SEXP argHSEXP) {
+RcppExport SEXP _GroupSortFuse2_myEm(SEXP argYSEXP, SEXP argThetaSEXP, SEXP argSigmaSEXP, SEXP argPiiSEXP, SEXP argArbSigmaSEXP, SEXP argMSEXP, SEXP argIndexSEXP, SEXP argCkSEXP, SEXP argASEXP, SEXP argPenaltySEXP, SEXP argLambdaValsSEXP, SEXP argEpsilonSEXP, SEXP argDeltaSEXP, SEXP argMaxRepSEXP, SEXP argMaxPgdSEXP, SEXP argUBoundSEXP, SEXP argVerboseSEXP, SEXP argHSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -51,12 +56,12 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_GroupSortFuse_bicLogLik", (DL_FUNC) &_GroupSortFuse_bicLogLik, 5},
-    {"_GroupSortFuse_myEm", (DL_FUNC) &_GroupSortFuse_myEm, 18},
+    {"_GroupSortFuse2_bicLogLik", (DL_FUNC) &_GroupSortFuse2_bicLogLik, 5},
+    {"_GroupSortFuse2_myEm", (DL_FUNC) &_GroupSortFuse2_myEm, 18},
     {NULL, NULL, 0}
 };
 
-RcppExport void R_init_GroupSortFuse(DllInfo *dll) {
+RcppExport void R_init_GroupSortFuse2(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
 }
