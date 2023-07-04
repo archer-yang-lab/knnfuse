@@ -69,6 +69,9 @@ double densityMultinomial(const Matrix<double, 1, Dynamic>& y,
 }
 
 MatrixXd transfMultinomial (const MatrixXd& theta) {
+  int K = theta.cols();  // Number of mixture components. 
+  int D = theta.rows();  // Dimension of the parameter space.
+  
   MatrixXd out(D, K);
   int j, k;
   double temp;
@@ -89,6 +92,9 @@ MatrixXd transfMultinomial (const MatrixXd& theta) {
 }
 
 MatrixXd invTransfMultinomial (const MatrixXd& theta, const MatrixXd& sigma) {
+  int K = theta.cols();  // Number of mixture components. 
+  int D = theta.rows();  // Dimension of the parameter space.
+  
   MatrixXd out (D, K);
   int j, k;
   double temp;
@@ -113,6 +119,9 @@ MatrixXd tMultinomial(const MatrixXd& y) {
 }
 
 MatrixXd gradBMultinomial (const MatrixXd& theta, const MatrixXd& sigma) {
+  int K = theta.cols();  // Number of mixture components. 
+  int D = theta.rows();  // Dimension of the parameter space.
+  
   MatrixXd out(D, K);
   int j, k;
   double temp;
@@ -133,6 +142,8 @@ MatrixXd gradBMultinomial (const MatrixXd& theta, const MatrixXd& sigma) {
 }
 
 double bMultinomial (const VectorXd& theta, const MatrixXd& sigma) {
+  D = theta.rows();  // Dimension of the parameter space.
+  
   double temp = 1.0;
   int j;
 
