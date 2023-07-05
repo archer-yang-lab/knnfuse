@@ -11,7 +11,7 @@
 
 using namespace Eigen;
 
-extern int K, D, N, n, M; 
+extern int K, D, N, n, M, graphtype; 
 extern double upsilon;
 extern bool arbSigma;
 
@@ -41,19 +41,21 @@ typedef struct PsiStruct {
 
 /*** Functions for computing the permutation. ***/
 bool isOrdered (int, int);
-MatrixXd reorder (const MatrixXd&);
-void alpha (const MatrixXd&, std::vector<int>&);
 double thetaDist (const VectorXd&, const VectorXd&);
-MatrixXd getDistanceMatrix (const MatrixXd&) ;
+MatrixXd getDistanceMatrix (const MatrixXd&);
 bool find (std::vector<int>, int);
-MatrixXd reorderTheta (const MatrixXd& theta);
-Psi reorderResult (const Psi&);
+MatrixXd graphgsf(const MatrixXd& theta);
+MatrixXd graph1nn(const MatrixXd& theta);
+MatrixXd graphnaive(const MatrixXd& theta);
+void alpha(const MatrixXd& theta, std::vector<int>& perm);
+MatrixXd reorderTheta(const MatrixXd& theta);
 double fullLogLikFunction(const MatrixXd& y, const MatrixXd& theta, const VectorXd& pii, const MatrixXd& sigma);
 double logLikFunction(const MatrixXd& y, const Psi& psi);
 
 int frequency(const MatrixXd& theta);
-VectorXd scadUpdate(double u, const Matrix<double, 1, Dynamic>& z, double lambda, double a);
-VectorXd mcpUpdate(double u, const Matrix<double, 1, Dynamic>& z, double lambda, double a);
+MatrixXd normaltheta (const MatrixXd& y, const MatrixXd& sigma, const MatrixXd& graph, const MatrixXd& wMtx, const MatrixXd& Eta, const MatrixXd& U);
+double etamax(const Matrix<double, 1, Dynamic>& z, double lambada);
+VectorXd softThresholding(const VectorXd& z, double lambda);
 VectorXd adaptiveLassoUpdate(double u, const Matrix<double, 1, Dynamic>& z, double lambda, double a);
 VectorXd scadLLAUpdate(double u, const Matrix<double, 1, Dynamic>& z, const Matrix<double, 1, Dynamic>& eta, double lambda, double a);
 VectorXd mcpLLAUpdate(double u, const Matrix<double, 1, Dynamic>& z, const Matrix<double, 1, Dynamic>& eta, double lambda, double a);
@@ -86,8 +88,8 @@ bool constrCheckMultinomial (const MatrixXd& theta);
 /*** Auxiliary functions for Poisson mixtures. ***/
 
 double densityPoisson(const Matrix<double, 1, Dynamic>& y,
-                          const Matrix<double, Dynamic, 1>& theta,
-                          const MatrixXd& sigma);
+                      const Matrix<double, Dynamic, 1>& theta,
+                      const MatrixXd& sigma);
 MatrixXd gradBPoisson (const MatrixXd& theta, const MatrixXd& sigma);
 double bPoisson (const VectorXd& theta, const MatrixXd& sigma);
 MatrixXd tPoisson (const MatrixXd& y);
@@ -107,8 +109,5 @@ MatrixXd tExponential (const MatrixXd& y);
 MatrixXd transfExponential (const MatrixXd&);
 MatrixXd invTransfExponential (const MatrixXd&, const MatrixXd&);
 bool constrCheckExponential (const MatrixXd& theta);
-
-
-
 
 

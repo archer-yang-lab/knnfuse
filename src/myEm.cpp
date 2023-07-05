@@ -1,8 +1,8 @@
 #include "gsf.h"
 
-int K, N, D, n, M, maxPgd, maxRep, lambdaIter, modelIndex, penalty;
+int K, N, D, n, M, graphtype, maxadmm, maxPgd, maxRep, lambdaIter, modelIndex, penalty;
 double epsilon, u, ck, tau1, a, delta,  
-       lambdaScale, uBound, H, alStart;
+lambdaScale, uBound, H, alStart;
 
 bool arbSigma, verbose;
 
@@ -15,191 +15,153 @@ double   (*b)(const VectorXd&, const MatrixXd&);
 MatrixXd (*T)(const MatrixXd&);
 double   (*density)(const Matrix<double, 1, Dynamic>&, const Matrix<double, Dynamic, 1>&, const MatrixXd&);
 MatrixXd (*invTransf)(const MatrixXd&, const MatrixXd&);
-bool     (*constrCheck)(const MatrixXd&);
+MatrixXd (*Graphmat)(const MatrixXd&);
+MatrixXd (*updateTheta)(const MatrixXd& , const MatrixXd&, const MatrixXd&, const MatrixXd&, const MatrixXd&, const MatrixXd& );
 VectorXd (*updateEta)(double, const Matrix<double, 1, Dynamic>&, double, double);
 VectorXd (*updateEtaLLA)(double, const Matrix<double, 1, Dynamic>&, const Matrix<double, 1, Dynamic>&, double, double);
+bool     (*constrCheck)(const MatrixXd&);
 
 Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const VectorXd& lambdaList);
 Rcpp::List rbic(const MatrixXd&, const Psi&, const VectorXd&);
 Psi mem(const MatrixXd&, const Psi&, double);
 Matrix<double, Dynamic, Dynamic> wMatrix(const MatrixXd& y, const Psi&);
-Psi mStep(const MatrixXd& y, const Psi&, const MatrixXd& wMtx, double lambda);
+Psi mStep(const MatrixXd& , const Psi& , const MatrixXd& ,  const MatrixXd& , double );
+MatrixXd admm(const MatrixXd& , const Psi&, const MatrixXd&, const MatrixXd&, double );
 MatrixXd pgd(const MatrixXd&, const Psi&, const MatrixXd&, double lambda) ;
 bool uCheck(double u, const MatrixXd& y, const MatrixXd& oldEta, const MatrixXd& newEta, const MatrixXd& sigma, const VectorXd& wMtxSums);
 
+
 // [[Rcpp::export(.myEm)]]
-extern "C" Rcpp::List myEm(SEXP argY, SEXP argTheta, SEXP argSigma, 
-                           SEXP argPii, SEXP argArbSigma, SEXP argM, 
-                           SEXP argIndex, SEXP argCk, SEXP argA, 
-                           SEXP argPenalty, SEXP argLambdaVals, SEXP argEpsilon, 
-                           SEXP argDelta, SEXP argMaxRep, SEXP argMaxPgd, 
-                           SEXP argUBound, SEXP argVerbose, SEXP argH){
+extern "C" Rcpp::List myEm(SEXP argY, SEXP argGraphtype, SEXP argTheta, SEXP argSigma, 
+                          SEXP argPii, SEXP argArbSigma, SEXP argM, 
+                          SEXP argIndex, SEXP argMaxAdmm, SEXP argCk, SEXP argA, 
+                          SEXP argPenalty, SEXP argLambdaVals, SEXP argEpsilon, 
+                          SEXP argMaxRep, SEXP argDelta,
+                          SEXP argVerbose){
   MatrixXd theta  = Rcpp::as<MatrixXd> (argTheta);      // Size D x K.
+  //MatrixXd Graph  = Rcpp::as<MatrixXd> (argGraph);      // Size K x K.
   MatrixXd y      = Rcpp::as<MatrixXd> (argY);          // Size n x N.
   MatrixXd sigma  = Rcpp::as<MatrixXd> (argSigma);      // Size N x N.
   VectorXd pii    = Rcpp::as<VectorXd> (argPii);        // Size 1 x K.
- 
+  
+  graphtype       = Rcpp::as<int> (argGraphtype);       //the graph to use in penalty
   arbSigma        = Rcpp::as<bool> (argArbSigma);       // Common unknown structure parameter check.
   ck              = Rcpp::as<double> (argCk);           // Parameter for penalty on the pi_k.
   epsilon         = Rcpp::as<double> (argEpsilon);      // Convergence criterion for EM algorithm.
-  maxPgd          = Rcpp::as<int> (argMaxPgd);          // Maximum number of repetetitions of the PGD algorithm.
+  maxadmm         = Rcpp::as<int> (argMaxAdmm);
+  //  maxPgd          = Rcpp::as<int> (argMaxPgd);          // Maximum number of repetetitions of the PGD algorithm.
   maxRep          = Rcpp::as<int> (argMaxRep);          // Maximum EM iterations.
   a               = Rcpp::as<double> (argA);            // Parameter for the SCAD or MCP penalty.  
   delta           = Rcpp::as<double> (argDelta);        // Convergence criterion for PGD algorithm.
   lambdaVals      = Rcpp::as<VectorXd> (argLambdaVals); // Values of lambda to be used.
-  uBound          = Rcpp::as<double> (argUBound);       // Upper bound on the parameter u for the PGD algorithm. 
+  //  uBound          = Rcpp::as<double> (argUBound);       // Upper bound on the parameter u for the PGD algorithm. 
   verbose         = Rcpp::as<bool> (argVerbose);        // 
   M               = Rcpp::as<int> (argM);               // Number of trials for multinomial mixtures. 
   modelIndex      = Rcpp::as<int> (argIndex);           // Model index -- see below.
-  H               = Rcpp::as<double> (argH);            // Hartigan lower bound for location-scale normal mixtures.
-  penalty         = Rcpp::as<int> (argPenalty);                                                 // H = 0 for other models. 
-
+  //  H               = Rcpp::as<double> (argH);            // Hartigan lower bound for location-scale normal mixtures.
+  penalty         = Rcpp::as<int> (argPenalty);                                   // H = 0 for other models. 
+  
   // Set important constants.
   K = theta.cols();  // Number of mixture components. 
   D = theta.rows();  // Dimension of the parameter space.
   N = y.cols();      // Dimension of the sample space. 
   n = y.rows();      // Sample size.
-
-  // Set penalty thresholding function. 
-  switch(penalty) {
-    case 1: 
-      updateEta = &scadUpdate; 
-      lambdaScale = sqrt(n); 
-      break;
-
-    case 2: 
-      updateEta = &mcpUpdate; 
-      lambdaScale = sqrt(n);
-      break;
-
-    case 3: 
-      updateEta = &adaptiveLassoUpdate; 
-      lambdaScale = n; //pow(n, 0.5);
-
-      if (lambdaVals(0) != 0) {
-        VectorXd temp = VectorXd::Zero(lambdaVals.size() + 1);
-        temp(0) = 0;
-        temp.tail(lambdaVals.size()) = lambdaVals;
-        lambdaVals = temp;
-      }
-
-      break;
-
-    case 4: 
-      updateEtaLLA = &scadLLAUpdate; 
-      lambdaScale = sqrt(n);
-      break;
-
-    case 5: 
-      updateEtaLLA = &mcpLLAUpdate; 
-      lambdaScale = sqrt(n);
-      break;
-
-    default: 
-      throw "Unknown penalty.";
+  //set graph type 
+  switch(graphtype){
+  case 1: Graphmat = &graphnaive;    //naive pairwise 
+  case 2: Graphmat = &graph1nn; //1nn
+  case 3: Graphmat = &graphgsf; //gsf
+    
   }
-
-  // Initialize transformation matrices.
-  upTransf = MatrixXd::Zero(K, K);
-  for (int j = 0; j < K; j++){
-    for (int k = 0; k < K; k++){
-      upTransf(j, k) = (j <= k) ? 1 : 0;
-    }
-  }
-
-  invEtaTransf  = upTransf.inverse();
-  ones = MatrixXd::Ones(n, K);
+  
   
   // Initialize the set of parameters.
   Psi psi;
   psi.pii   = pii;
   psi.sigma = sigma;
-
+  
   alStart = 0;
-
+  
   switch(modelIndex) {
-
-    // User selected a multivariate normal mixture in location. 
-    // The covariance matrix is assumed to be common, but if hasFixedMatrix is false, 
-    // it is unknown and estimated by the EM algorithm.
-    case 1: gradB       = &gradBNormalLoc;
-            b           = &bNormalLoc;
-            T           = &tNormalLoc;
-            density     = &densityNormalLoc;
-            invTransf   = &invTransfNormalLoc;
-            constrCheck = &constrCheckNormalLoc;            
-
-            psi.theta   = transfNormalLoc(theta, sigma);
-
-            for (int i = 0; i < n; i++) {
-              yOuterProd.push_back((y.row(i).transpose())*(y.row(i)));
-            }
-
-            break;
+  
+  // User selected a multivariate normal mixture in location. 
+  // The covariance matrix is assumed to be common, but if hasFixedMatrix is false, 
+  // it is unknown and estimated by the EM algorithm.
+  case 1:   updateTheta = &normaltheta;
+    gradB       = &gradBNormalLoc;
+    b           = &bNormalLoc;
+    T           = &tNormalLoc;
+    density     = &densityNormalLoc;
+    invTransf   = &invTransfNormalLoc;
+    constrCheck = &constrCheckNormalLoc;            
+    
+    psi.theta   = transfNormalLoc(theta, sigma);
+    
+    for (int i = 0; i < n; i++) {
+      yOuterProd.push_back((y.row(i).transpose())*(y.row(i)));
+    }
+    
+    break;
     // User selected a multinomial mixture.
-    case 3: gradB       = &gradBMultinomial;
-            b           = &bMultinomial; 
-            T           = &tMultinomial;
-            density     = &densityMultinomial;
-            invTransf   = &invTransfMultinomial;
-            constrCheck = &constrCheckMultinomial;
-
-            psi.theta   = transfMultinomial(theta);
-
-            break;
-
+  case 3: gradB       = &gradBMultinomial;
+    b           = &bMultinomial; 
+    T           = &tMultinomial;
+    density     = &densityMultinomial;
+    invTransf   = &invTransfMultinomial;
+    constrCheck = &constrCheckMultinomial;
+    
+    psi.theta   = transfMultinomial(theta);
+    
+    break;
+    
     // User selected a Poisson mixture.
-    case 5: gradB       = &gradBPoisson; 
-            b           = &bPoisson;
-            T           = &tPoisson;
-            density     = &densityPoisson;
-            invTransf   = &invTransfPoisson;
-            constrCheck = &constrCheckPoisson;
-
-            psi.theta   = transfPoisson(theta);
-
-            break;
-
+  case 5: gradB       = &gradBPoisson; 
+    b           = &bPoisson;
+    T           = &tPoisson;
+    density     = &densityPoisson;
+    invTransf   = &invTransfPoisson;
+    constrCheck = &constrCheckPoisson;
+    
+    psi.theta   = transfPoisson(theta);
+    
+    break;
+    
     // User selected a mixture of exponential distributions.
-    case 6: gradB       = &gradBExponential; 
-            b           = &bExponential;
-            T           = &tExponential;
-            density     = &densityExponential;
-            invTransf   = &invTransfExponential;
-            constrCheck = &constrCheckExponential;
-
-            psi.theta   = transfExponential(theta);
-
-            break;
-
-    // This will not happen, unless someone is calling the back-end C++ code themself.
-    default: return NULL;   
+  case 6: gradB       = &gradBExponential; 
+    b           = &bExponential;
+    T           = &tExponential;
+    density     = &densityExponential;
+    invTransf   = &invTransfExponential;
+    constrCheck = &constrCheckExponential;
+    
+    psi.theta   = transfExponential(theta);
+    
+    break;
   }
-
+  
   transformedData = (*T)(y).transpose();
-  Rcpp::List out = estimateSequence(y, psi, lambdaVals);
-
+  Rcpp::List out = estimateSequence(y,psi, lambdaVals);
+  
   return out; 
 }
 
 // The Modified EM (MEM) Algorithm wrapper.
 Psi mem(const MatrixXd& y, const Psi& psi, double lambda) {
-  MatrixXd wMtx, th;
+  MatrixXd wMtx, th, graph;
   Psi oldEstimate, newEstimate = psi;
   int counter = 0;
-
+  
   do {
-    oldEstimate = reorderResult(newEstimate);
-    newEstimate = mStep(y, oldEstimate, wMatrix(y, oldEstimate), lambda);
-
-    th = invTransf(newEstimate.theta, newEstimate.sigma);
-
+    graph = (*Graphmat)(newEstimate.theta);
+    oldEstimate = newEstimate;
+    newEstimate = mStep(y, oldEstimate, graph, wMatrix(y, oldEstimate), lambda);
+    
   } while (counter++ < maxRep && oldEstimate.distance(newEstimate) >= epsilon);
-
+  
   if (verbose) {
     Rcpp::Rcout << "Total MEM iterations: " << counter << ".\n";
   }
-
+  
   return newEstimate;
 }
 
@@ -227,64 +189,104 @@ MatrixXd wMatrix(const MatrixXd& y, const Psi& psi) {
 }
 
 // M-Step of the Modified EM Algorithm.
-Psi mStep(const MatrixXd& y, const Psi& psi, const MatrixXd& wMtx, double lambda) {
-  int K = psi.theta.cols();  // Number of mixture components. 
-  int n = y.rows();      // Sample size.
-  
+Psi mStep(const MatrixXd& y, const Psi& psi, const MatrixXd& graph,  const MatrixXd& wMtx, double lambda) {
   Psi result;
   int i, k;
   result.pii = VectorXd::Zero(K);
-
+  
   if(!arbSigma) {
     double acc;
-  
+    
     for (k = 0; k < K; k++) {
       acc = 0.0;
-
+      
       for (i = 0; i < n; i++) {
         acc += wMtx(i, k);
       }
-
+      
       result.pii(k) = (acc + ck) / (n + K * ck);
     }
-
+    
     result.sigma = psi.sigma;
- 
-  // The following is currently hard-coded for updating 
-  // the common structure parameter ("sigma")
-  // in multivariate location Normal mixtures.
-  // The notation is that of McLachlan and Peel 
-  // (Finite Mixture Models, Chapter 3). 
+    
+    // The following is currently hard-coded for updating 
+    // the common structure parameter ("sigma")
+    // in multivariate location Normal mixtures.
+    // The notation is that of McLachlan and Peel 
+    // (Finite Mixture Models, Chapter 3). 
   } else {   
     double Tk1Sum;      
     MatrixXd Tk2Sum(N, 1);
     MatrixXd Tk3Sum(N, N);
-
+    
     result.sigma = MatrixXd::Zero(N, N);
-
+    
     for (k = 0; k < K; k++) {
       Tk1Sum = wMtx.col(k).sum();
       Tk2Sum = MatrixXd::Zero(N, 1); //(wMtx.col(k).transpose() * y).transpose();
       Tk3Sum = MatrixXd::Zero(N, N);
- 
+      
       result.pii(k) = (Tk1Sum + ck) / (n + K * ck);
-
+      
       for (i = 0; i < n; i++) {
         Tk2Sum += wMtx(i, k) * y.row(i).transpose();
         Tk3Sum += wMtx(i, k) * /*yOuterProd[i]; */ y.row(i).transpose() * y.row(i);
       }
-  
+      
       result.sigma += Tk3Sum - (1.0 / Tk1Sum) * Tk2Sum * Tk2Sum.transpose();
     }
-
+    
     result.sigma /= n;
   }
-
+  
   result.theta = psi.theta;
-
-  result.theta = pgd(y, result, wMtx, lambda);
-
+  
+  result.theta = admm(y, result, graph, wMtx, lambda);
+  
   return result;
+}
+
+//Revised ADMM algorithm
+MatrixXd admm(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const MatrixXd& wMtx, double lambda){
+  int k,j, counter = 0;
+  double phi;
+  MatrixXd newTheta = MatrixXd::Zero(D, K), 
+    oldTheta(D, K), 
+    Eta(D,K*K), 
+    oldU = MatrixXd::Zero(D,K*K),
+    newU(D,K*K);
+  
+  //Initialize theta
+  
+  oldTheta = psi.theta;
+  for(k = 0; k < K; k++) {
+    for(j = 0; j < K; j++){
+      Eta.col(k+K*j) = psi.theta.col(k);
+    }}
+  
+  do {
+    oldTheta = newTheta ; 
+    newTheta = (*updateTheta)(y, psi.sigma, graph, wMtx, Eta, oldU);
+    
+    
+    //update Eta
+    for(k = 0; k < K; k++) {
+      for(j = 0; j < K; j++){
+        if (graph(k,j)==1){
+          phi = etamax(newTheta.col(k)+oldU.col(k+K*j)-newTheta.col(j)-oldU.col(j+K*k), lambda);
+          Eta.col(k+K*j) = phi*(newTheta.col(k)+oldU.col(k+K*j))+(1-phi)*(newTheta.col(j)+oldU.col(j+K*k));
+        }}}
+    
+    //update U
+    for(k = 0; k < K; k++) {
+      for(j = 0; j < K; j++){
+        if (graph(k,j)==1){
+          newU.col(k+K*j)=oldU.col(k+K*j)+newTheta.col(k)-Eta.col(k+K*j);
+        }}}
+    oldU=newU;
+    
+  } while (counter++ < maxadmm ||(oldTheta - newTheta).norm() < delta);
+  return newTheta;
 }
 
 // Proximal Gradient Descent Algorithm. 

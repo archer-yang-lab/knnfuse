@@ -5,7 +5,7 @@
     .Call('_GroupSortFuse2_bicLogLik', PACKAGE = 'GroupSortFuse2', argY, argTheta, argPii, argSigma, argIndex)
 }
 
-.myEm <- function(argY, argTheta, argSigma, argPii, argArbSigma, argM, argIndex, argCk, argA, argPenalty, argLambdaVals, argEpsilon, argDelta, argMaxRep, argMaxPgd, argUBound, argVerbose, argH) {
-    .Call('_GroupSortFuse2_myEm', PACKAGE = 'GroupSortFuse2', argY, argTheta, argSigma, argPii, argArbSigma, argM, argIndex, argCk, argA, argPenalty, argLambdaVals, argEpsilon, argDelta, argMaxRep, argMaxPgd, argUBound, argVerbose, argH)
+.myEm <- function(argY, argGraphtype, argTheta, argSigma, argPii, argArbSigma, argM, argIndex, argMaxAdmm, argCk, argA, argPenalty, argLambdaVals, argEpsilon, argMaxRep, argDelta, argVerbose) {
+    .Call('_GroupSortFuse2_myEm', PACKAGE = 'GroupSortFuse2', argY, argGraphtype, argTheta, argSigma, argPii, argArbSigma, argM, argIndex, argMaxAdmm, argCk, argA, argPenalty, argLambdaVals, argEpsilon, argMaxRep, argDelta, argVerbose)
 }
 

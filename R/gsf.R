@@ -71,95 +71,92 @@
 #' 
 #'    # Requires ggplot2.
 #'    plot(out, gg=TRUE, eta=FALSE)
-normalLocOrder <- function (y, lambdas, K = NULL, sigma = NULL, arbSigma = TRUE, ...) {
+normalLocOrder <- function (y, Graph, lambdas, K = NULL, sigma = NULL, arbSigma = TRUE, ...) {
   input <- list(...)
-
+  
   mu  <- input$mu
   pii <- input$pii
-
+  
   if (is.null(input[["penalty"]])) penalty <- "SCAD"
   else penalty <- input[["penalty"]]
-
-  if (is.null(input[["uBound"]])) uBound <- 0.1
-  else uBound <- input[["uBound"]]
   
   if (is.null(input[["C"]])) C <- 3
   else C <- input[["C"]]
-
+  
   if (is.null(input[["a"]])) a <- 3.7
   else a <- input[["a"]]
-
-  if (is.null(input[["convPgd"]])) delta <- 1e-5
-  else delta <- input[["convPgd"]]
-
+  
+  if (is.null(input[["convADMM"]])) delta <- 1e-5
+  else delta <- input[["convADMM"]]
+  
   if (is.null(input[["convMem"]])) epsilon <- 1e-8
   else epsilon <- input[["convMem"]]
-
+  
+  if (is.null(input[["maxadmm"]])) maxadmm <- 500
+  else maxMem <- input[["maxadmm"]]
+  
   if (is.null(input[["maxMem"]])) maxMem <- 2500
   else maxMem <- input[["maxMem"]]
-
-  if (is.null(input[["maxPgd"]])) maxPgd <- 1500
-  else maxPgd <- input[["maxPgd"]]
-
+  
   if (is.null(input[["verbose"]])) verbose <- T
   else verbose <- input[["verbose"]]
-
-  if (is.data.frame(y)) {      
+  
+  if (is.data.frame(y)) {
     y <- as.matrix(y)
   }
-
-  .validateParams(y, mu, "mu", pii, K)
-  .validateOther(maxMem, maxPgd, lambdas, penalty, a, C, epsilon, delta)
-  .validateNormalLoc(y, mu, sigma, arbSigma)
-
+  
+  # .validateParams(y, mu, "mu", pii, K)
+  # .validateOther(maxMem, maxPgd, lambdas, penalty, a, C, epsilon, delta)
+  # .validateNormalLoc(y, mu, sigma, arbSigma)
+  
   lambdas <- sort(lambdas)
-
-  if (!is.null(mu) && !is.null(pii)) {
+  
+  if (!is.null(mu) && !is.null(pii)) { #when the starting values are pre-specified
     if (arbSigma) sigma <- cov(y)
-
-    out <- .myEm(y, mu, sigma, pii, arbSigma, -1, 1, C, a,
-                .penCode(penalty), lambdas, epsilon, delta, maxMem, maxPgd, uBound, verbose, 0)
-
+    
+    out <- .myEm(y, Graph, mu, sigma, pii, arbSigma, -1, 1, maxadmm, C, a,
+                 .penCode(penalty), lambdas, epsilon, maxMem,delta, verbose)
+    
   } else if (!is.null(mu) && is.null(pii)) {
-    K <- ncol(mu)    
+    K <- ncol(mu)
     if (arbSigma) sigma <- cov(y)
-
-    out <- .myEm(y, mu, sigma, rep(1.0/K, K), arbSigma, -1, 1, C, a,
-                .penCode(penalty), lambdas, epsilon, delta, maxMem, maxPgd, uBound, verbose, 0)
-
+    
+    out <- .myEm(y, Graph, mu, sigma, rep(1.0/K, K), arbSigma,-1, 1, maxadmm, C, a,
+                 .penCode(penalty), lambdas, epsilon, maxMem, delta, verbose)
+    
   } else {
     if (is.null(pii)) {
       pii <- rep(1.0/K, K)
-
+      
     } else {
       K <- length(pii)
     }
-
+    
     if (arbSigma) sigma <- cov(y)
-
+    
     # Compute starting values.
     means <- apply(y, 1, mean)
     yOrdered <- y[order(means), ]
     yBinned  <- list()
-
+    
     n <- nrow(y)
-
+    
     for (j in 1:K) {
       yBinned[[j]] <- yOrdered[max(1, floor((j - 1) * n/K)):ceiling(j * n/K), ]
     }
- 
+    
     hypTheta <- lapply(1:K, function(i) apply(yBinned[[i]], 2, mean))
     
     theta <- matrix(NA, ncol(y), K)
     for(k in 1:K) {
-      theta[,k] <- as.vector(mixtools::rmvnorm(1, mu = as.vector(hypTheta[[k]]), sigma = sigma))
-    }    
-
-    out <- .myEm(y, theta, sigma, pii, arbSigma, -1, 1, C, a,
-                .penCode(penalty), lambdas, epsilon, delta, maxMem, maxPgd, uBound, verbose, 0)
+      theta[,k] <- as.vector(rmvnorm(1, mu = as.vector(hypTheta[[k]]), Sigma = sigma))
+    }
+    
+    out <- .myEm(y, Graph, theta, sigma, pii, arbSigma, -1, 1, maxadmm, C, a,
+                 .penCode(penalty), lambdas, epsilon, maxMem, delta, verbose)
   }
-
-  class(out) <- c("normalLocGsf", "gsf")     
+  
+  class(out) <- c("normalLocGsf", "gsf")
   out
 }
 
