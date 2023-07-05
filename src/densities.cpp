@@ -69,9 +69,6 @@ double densityMultinomial(const Matrix<double, 1, Dynamic>& y,
 }
 
 MatrixXd transfMultinomial (const MatrixXd& theta) {
-  int K = theta.cols();  // Number of mixture components. 
-  int D = theta.rows();  // Dimension of the parameter space.
-  
   MatrixXd out(D, K);
   int j, k;
   double temp;

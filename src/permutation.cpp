@@ -5,8 +5,6 @@ bool isOrdered(int i, int j) {
 }
 
 double thetaDist(const VectorXd& theta1, const VectorXd& theta2) {
-  int D = theta1.rows();  // Dimension of the parameter space.
-  
    double acc = 0.0;
 
    for (int i = 0; i < D; i++) {
@@ -18,8 +16,6 @@ double thetaDist(const VectorXd& theta1, const VectorXd& theta2) {
 
 // Generates the symmetrix matrix (with 0 diagonal) of pairwise distances between the columns of theta.
 MatrixXd getDistanceMatrix(const MatrixXd& theta) {
-  int K = theta.cols();  // Number of mixture components. 
-  
   MatrixXd distances(K, K);
 
   for (int k = 0; k < K; k++) {
@@ -44,8 +40,6 @@ bool find(std::vector<int> sigma, int j) {
 
 // Generates the permutation alpha.
 void alpha(const MatrixXd& theta, std::vector<int>& perm) {
-  int K = theta.cols();  // Number of mixture components. 
-  
   MatrixXd distances = getDistanceMatrix(theta);
 
    std::vector<int> sigma, tau;
@@ -114,9 +108,6 @@ void alpha(const MatrixXd& theta, std::vector<int>& perm) {
 
  // Reorders the columns of theta with respect to the permutation alpha.
  MatrixXd reorderTheta(const MatrixXd& theta) {
-   int K = theta.cols();  // Number of mixture components. 
-   int D = theta.rows();  // Dimension of the parameter space.
-
    MatrixXd result(D, K);
    std::vector<int> perm(K);
 
@@ -130,9 +121,6 @@ void alpha(const MatrixXd& theta, std::vector<int>& perm) {
  }
 
 Psi reorderResult(const Psi& psi) {
-  int K = psi.theta.cols();  // Number of mixture components. 
-  int D = psi.theta.rows();  // Dimension of the parameter space.
-  
   MatrixXd thetaResult(D, K);
   VectorXd piiResult(K);
   std::vector<int> perm(K);
@@ -155,7 +143,6 @@ Psi reorderResult(const Psi& psi) {
 //gsf
 MatrixXd graphgsf(const MatrixXd& theta) {
   MatrixXd distances = getDistanceMatrix(theta);
-  int K = theta.cols();
   MatrixXd graph = MatrixXd::Zero(K,K);
   
   std::vector<int> sigma, tau;
@@ -233,7 +220,6 @@ MatrixXd graphgsf(const MatrixXd& theta) {
 /*1nn*/
 MatrixXd graph1nn(const MatrixXd& theta) {
   MatrixXd distances = getDistanceMatrix(theta);
-  K = theta.cols();  // Number of mixture components. 
   MatrixXd graph = MatrixXd::Zero(K,K);
   
   double sMinEntry;
@@ -258,7 +244,6 @@ MatrixXd graph1nn(const MatrixXd& theta) {
 
 //naive
 MatrixXd graphnaive(const MatrixXd& theta) {
-  K = theta.cols();  // Number of mixture components. 
   MatrixXd graph = MatrixXd::Ones(K,K);
   for (int j = 0; j < K; j++){
     graph(j,j) = 0;
@@ -277,9 +262,6 @@ bool linSearch(const MatrixXd& target, const MatrixXd& list) {
 }
 
 int frequency(const MatrixXd& theta) {
-  int K = theta.cols();  // Number of mixture components. 
-  int D = theta.rows();  // Dimension of the parameter space.
-  
 	MatrixXd uniqueThetas;
 	MatrixXd currentTheta(D, 1);
 

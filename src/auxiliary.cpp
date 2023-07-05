@@ -1,8 +1,6 @@
 #include "gsf.h"
 
 MatrixXd normaltheta (const MatrixXd& y, const MatrixXd& sigma, const MatrixXd& graph, const MatrixXd& wMtx, const MatrixXd& Eta, const MatrixXd& U){
-  int n = y.rows();      // Sample size.
-  
   int k,d,i,j;
   MatrixXd Theta(D,K),
   A(D,D),

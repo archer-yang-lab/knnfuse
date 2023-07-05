@@ -167,10 +167,6 @@ Psi mem(const MatrixXd& y, const Psi& psi, double lambda) {
 
 // Creates a matrix of w_ik values.
 MatrixXd wMatrix(const MatrixXd& y, const Psi& psi) {
-
-  int K = psi.theta.cols();  // Number of mixture components. 
-  int n = y.rows();      // Sample size.
-
   MatrixXd result(n, K);
   double acc;
 
@@ -291,9 +287,6 @@ MatrixXd admm(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const Ma
 
 // Proximal Gradient Descent Algorithm. 
 MatrixXd pgd(const MatrixXd& y, const Psi& psi, const MatrixXd& wMtx, double lambda){
-  int K = psi.theta.cols();  // Number of mixture components. 
-  int D = psi.theta.rows();  // Dimension of the parameter space.
-  
   int k, counter = 0, restartCounter;
   double u;
   MatrixXd newEta = MatrixXd::Zero(D, K), 
@@ -384,8 +377,6 @@ MatrixXd pgd(const MatrixXd& y, const Psi& psi, const MatrixXd& wMtx, double lam
 // Learning the tuning parameter u.
 bool uCheck(double u, const MatrixXd& y, const MatrixXd& oldEta, const MatrixXd& newEta, const MatrixXd& sigma, const VectorXd& wMtxSums) {
   double t1 = 0.0, t2 = 0.0;
-  int K = oldEta.cols();  // Number of mixture components. 
-  int D = oldEta.rows();  // Dimension of the parameter space.
   
   MatrixXd grad(D, K);
 
@@ -425,8 +416,6 @@ double logLikFunction(const MatrixXd& y, const Psi& psi){
 }
 
 Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const VectorXd& lambdaList){
-  int K = startingVals.theta.cols();  // Number of mixture components. 
-  
   Psi psi = startingVals, minPsi;
   int i, k;
   MatrixXd transfTheta;
@@ -466,7 +455,7 @@ Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const Ve
    
     pii = Rcpp::wrap(psi.pii);
 
-    transfTheta = reorderTheta(invTransf(psi.theta, psi.sigma));
+    transfTheta = invTransf(psi.theta, psi.sigma);
 
     for(k = 0; k < K; k++) {
       std::ostringstream oss1;
