@@ -96,6 +96,7 @@ extern "C" Rcpp::List myEm(SEXP argY, SEXP argGraphtype, SEXP argTheta, SEXP arg
     constrCheck = &constrCheckNormalLoc;            
     
     psi.theta   = transfNormalLoc(theta, sigma);
+    Rcpp::Rcout << "transformed theta" << psi.theta << "\n";
     
     for (int i = 0; i < n; i++) {
       yOuterProd.push_back((y.row(i).transpose())*(y.row(i)));
@@ -123,7 +124,7 @@ extern "C" Rcpp::List myEm(SEXP argY, SEXP argGraphtype, SEXP argTheta, SEXP arg
     constrCheck = &constrCheckPoisson;
     
     psi.theta   = transfPoisson(theta);
-    
+
     break;
     
     // User selected a mixture of exponential distributions.
@@ -151,12 +152,14 @@ Psi mem(const MatrixXd& y, const Psi& psi, double lambda) {
   Psi oldEstimate, newEstimate = psi;
   int counter = 0;
   
-  do {
-    graph = (*Graphmat)(newEstimate.theta);
+  //do {
+    graph = graph1nn(newEstimate.theta);
+    Rcpp::Rcout << "graph" << graph << "\n";
     oldEstimate = newEstimate;
     newEstimate = mStep(y, oldEstimate, graph, wMatrix(y, oldEstimate), lambda);
     
-  } while (counter++ < maxRep && oldEstimate.distance(newEstimate) >= epsilon);
+  //} while (counter++ < maxRep && oldEstimate.distance(newEstimate) >= epsilon);
+  counter++;
   
   if (verbose) {
     Rcpp::Rcout << "Total MEM iterations: " << counter << ".\n";
@@ -260,7 +263,7 @@ MatrixXd admm(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const Ma
       Eta.col(k+K*j) = psi.theta.col(k);
     }}
   
-  do {
+  //do {
     oldTheta = newTheta ; 
     newTheta = (*updateTheta)(y, psi.sigma, graph, wMtx, Eta, oldU);
     
@@ -281,7 +284,7 @@ MatrixXd admm(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const Ma
         }}}
     oldU=newU;
     
-  } while (counter++ < maxadmm ||(oldTheta - newTheta).norm() < delta);
+//  } while (counter++ < maxadmm ||(oldTheta - newTheta).norm() < delta);
   return newTheta;
 }
 
@@ -444,7 +447,7 @@ Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const Ve
 
     try {
  
-      psi = mem(y, psi, lambdaScale * lambdaList(i));
+     psi = mem(y, psi, lambdaScale * lambdaList(i));
 
       if (verbose) 
         Rcpp::Rcout << "Estimate: \n" << invTransf(psi.theta, psi.sigma) << "\n\n";

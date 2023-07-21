@@ -2,8 +2,8 @@
 
 MatrixXd normaltheta (const MatrixXd& y, const MatrixXd& sigma, const MatrixXd& graph, const MatrixXd& wMtx, const MatrixXd& Eta, const MatrixXd& U){
   int k,d,i,j;
-  MatrixXd Theta(D,K),
-  A(D,D),
+  MatrixXd Theta =  MatrixXd::Zero(D,K);
+  MatrixXd A(D,D),
   B(D,1),
   C(D,1);
   MatrixXd I = MatrixXd::Zero(D,D);
@@ -17,7 +17,8 @@ MatrixXd normaltheta (const MatrixXd& y, const MatrixXd& sigma, const MatrixXd& 
   for(d=0 ; d < D; d++){
     I(d,d)=1 ;
   }
-  for(k = 0; k < K; k++) {
+  //for(k = 0; k < K; k++) {
+  k=0;
     A = wMtxSums[k]*sigma+graph.col(k).sum()*I;
     B = MatrixXd::Zero(D,1);
     for (i=0; i < n; i++){
@@ -26,11 +27,13 @@ MatrixXd normaltheta (const MatrixXd& y, const MatrixXd& sigma, const MatrixXd& 
     C = MatrixXd::Zero(D,1);
     for (j = 0 ; j < K; j++){
       if (graph(k,j)==1){
+        Rcpp::Rcout << "k=" << k << "j=" << j <<"\n";
         C = C + Eta.col(k+K*j)-U.col(k+K*j);
       }
     }
-    Theta.col(k) = A.inverse() * (B + C) ;
-  } 
+    //Theta.col(k) = A.inverse() * (B + C) ;
+    Theta.col(k) = C ;
+  //} 
   return Theta;
 }
 

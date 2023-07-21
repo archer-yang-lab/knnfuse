@@ -219,6 +219,7 @@ MatrixXd graphgsf(const MatrixXd& theta) {
 
 /*1nn*/
 MatrixXd graph1nn(const MatrixXd& theta) {
+  int K = theta.cols();
   MatrixXd distances = getDistanceMatrix(theta);
   MatrixXd graph = MatrixXd::Zero(K,K);
   
@@ -238,7 +239,9 @@ MatrixXd graph1nn(const MatrixXd& theta) {
     }
     graph(k,sResult) = 1;
     graph(sResult,k) = 1;
+    Rcpp::Rcout << "k-th row" << graph.row(k) << "\n";
   }
+  
   return graph;
 }
 
