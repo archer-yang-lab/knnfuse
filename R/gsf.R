@@ -71,7 +71,7 @@
 #' 
 #'    # Requires ggplot2.
 #'    plot(out, gg=TRUE, eta=FALSE)
-normalLocOrder <- function (y, Graph, lambdas, K = NULL, sigma = NULL, arbSigma = TRUE, ...) {
+normalLocOrder <- function (y, m, lambdas, K = NULL, sigma = NULL, arbSigma = TRUE, ...) {
   input <- list(...)
   
   mu  <- input$mu
@@ -92,7 +92,7 @@ normalLocOrder <- function (y, Graph, lambdas, K = NULL, sigma = NULL, arbSigma 
   if (is.null(input[["convMem"]])) epsilon <- 1e-8
   else epsilon <- input[["convMem"]]
   
-  if (is.null(input[["maxadmm"]])) maxadmm <- 500
+  if (is.null(input[["maxadmm"]])) maxadmm <- 200
   else maxMem <- input[["maxadmm"]]
   
   if (is.null(input[["maxMem"]])) maxMem <- 2500
@@ -114,14 +114,14 @@ normalLocOrder <- function (y, Graph, lambdas, K = NULL, sigma = NULL, arbSigma 
   if (!is.null(mu) && !is.null(pii)) { #when the starting values are pre-specified
     if (arbSigma) sigma <- cov(y)
     
-    out <- .myEm(y, Graph, mu, sigma, pii, arbSigma, -1, 1, maxadmm, C, a,
+    out <- .myEm(y, M, mu, sigma, pii, arbSigma, -1, 1, maxadmm, C, a,
                  .penCode(penalty), lambdas, epsilon, maxMem,delta, verbose)
     
   } else if (!is.null(mu) && is.null(pii)) {
     K <- ncol(mu)
     if (arbSigma) sigma <- cov(y)
     
-    out <- .myEm(y, Graph, mu, sigma, rep(1.0/K, K), arbSigma,-1, 1, maxadmm, C, a,
+    out <- .myEm(y, m, mu, sigma, rep(1.0/K, K), arbSigma,-1, 1, maxadmm, C, a,
                  .penCode(penalty), lambdas, epsilon, maxMem, delta, verbose)
     
   } else {
@@ -153,7 +153,7 @@ normalLocOrder <- function (y, Graph, lambdas, K = NULL, sigma = NULL, arbSigma 
       theta[,k] <- as.vector(rmvnorm(1, mu = as.vector(hypTheta[[k]]), Sigma = sigma))
     }
     
-    out <- .myEm(y, Graph, theta, sigma, pii, arbSigma, -1, 1, maxadmm, C, a,
+    out <- .myEm(y, m, theta, sigma, pii, arbSigma, -1, 1, maxadmm, C, a,
                  .penCode(penalty), lambdas, epsilon, maxMem, delta, verbose)
   }
   
@@ -703,7 +703,8 @@ bicTuning <- function(y, result) {
 
   estimate[["pii"]]   <- result[[minIndex]]$pii
   estimate[["order"]] <- result[[minIndex]]$order
-  estimate[["lambda"]]<- result[[minIndex]]$lambda 
+  estimate[["lambda"]]<- result[[minIndex]]$lambda
+  estimate[["bic"]] <- bic[minIndex]
 
   out[["summary"]] = data.frame(lambdaVals, order, bic, loglik, df)
   out[["result"]] = estimate

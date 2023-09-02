@@ -3,7 +3,7 @@
 MatrixXd normaltheta (const MatrixXd& y, const MatrixXd& sigma, const MatrixXd& graph, const MatrixXd& wMtx, const MatrixXd& Eta, const MatrixXd& U){
   int k,d,i,j;
   MatrixXd Theta =  MatrixXd::Zero(D,K);
-  MatrixXd A(D,D),
+  MatrixXd A(D,D), Ainv(D,D),
   B(D,1),
   C(D,1);
   MatrixXd I = MatrixXd::Zero(D,D);
@@ -17,29 +17,39 @@ MatrixXd normaltheta (const MatrixXd& y, const MatrixXd& sigma, const MatrixXd& 
   for(d=0 ; d < D; d++){
     I(d,d)=1 ;
   }
-  //for(k = 0; k < K; k++) {
-  k=0;
+  for(k = 0; k < K; k++) {
     A = wMtxSums[k]*sigma+graph.col(k).sum()*I;
+    Ainv = A.inverse();
+    //Rcpp::Rcout << "A" << A <<"\n";
+    //Rcpp::Rcout << "A.inverse" << Ainv <<"\n";
     B = MatrixXd::Zero(D,1);
+    //Rcpp::Rcout << "Bstart" << B <<"\n";
     for (i=0; i < n; i++){
-      B = B + wMtx(i,k)*y.row(i);
+      B = B + wMtx(i,k)*y.row(i).transpose();
+      //Rcpp::Rcout << "B2" << B.row(1)<< "w" << wMtx(i,k) << "y" << y.row(i);
     }
     C = MatrixXd::Zero(D,1);
     for (j = 0 ; j < K; j++){
       if (graph(k,j)==1){
-        Rcpp::Rcout << "k=" << k << "j=" << j <<"\n";
+        //Rcpp::Rcout << "k=" << k << "j=" << j <<"\n";
         C = C + Eta.col(k+K*j)-U.col(k+K*j);
       }
     }
-    //Theta.col(k) = A.inverse() * (B + C) ;
-    Theta.col(k) = C ;
-  //} 
+    Theta.col(k) = Ainv * (B + C) ;
+    //Rcpp::Rcout << "B" << B <<"\n";
+    //Rcpp::Rcout << "C" << C <<"\n";
+    //Rcpp::Rcout << "Theta.col" << Theta.col(k) <<"\n";
+  } 
   return Theta;
 }
 
 double etamax(const Matrix<double, 1, Dynamic>& z, double lambda){
   double normZ = z.norm(), u;
+  //Rcpp::Rcout << "normZ" << normZ <<"\n";
+  //Rcpp::Rcout << "lambda" << lambda <<"\n";
+  //Rcpp::Rcout << "1/normZ" << (1.0/normZ) <<"\n";
   u = 1-(1.0/normZ) * lambda;
+  //Rcpp::Rcout << "valuephi" << u <<"\n";
   if( u>0.5) {
     return u;
   } else {

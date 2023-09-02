@@ -27,13 +27,13 @@ BEGIN_RCPP
 END_RCPP
 }
 // myEm
-extern "C" Rcpp::List myEm(SEXP argY, SEXP argGraphtype, SEXP argTheta, SEXP argSigma, SEXP argPii, SEXP argArbSigma, SEXP argM, SEXP argIndex, SEXP argMaxAdmm, SEXP argCk, SEXP argA, SEXP argPenalty, SEXP argLambdaVals, SEXP argEpsilon, SEXP argMaxRep, SEXP argDelta, SEXP argVerbose);
-RcppExport SEXP _GroupSortFuse2_myEm(SEXP argYSEXP, SEXP argGraphtypeSEXP, SEXP argThetaSEXP, SEXP argSigmaSEXP, SEXP argPiiSEXP, SEXP argArbSigmaSEXP, SEXP argMSEXP, SEXP argIndexSEXP, SEXP argMaxAdmmSEXP, SEXP argCkSEXP, SEXP argASEXP, SEXP argPenaltySEXP, SEXP argLambdaValsSEXP, SEXP argEpsilonSEXP, SEXP argMaxRepSEXP, SEXP argDeltaSEXP, SEXP argVerboseSEXP) {
+extern "C" Rcpp::List myEm(SEXP argY, SEXP argm, SEXP argTheta, SEXP argSigma, SEXP argPii, SEXP argArbSigma, SEXP argM, SEXP argIndex, SEXP argMaxAdmm, SEXP argCk, SEXP argA, SEXP argPenalty, SEXP argLambdaVals, SEXP argEpsilon, SEXP argMaxRep, SEXP argDelta, SEXP argVerbose);
+RcppExport SEXP _GroupSortFuse2_myEm(SEXP argYSEXP, SEXP argmSEXP, SEXP argThetaSEXP, SEXP argSigmaSEXP, SEXP argPiiSEXP, SEXP argArbSigmaSEXP, SEXP argMSEXP, SEXP argIndexSEXP, SEXP argMaxAdmmSEXP, SEXP argCkSEXP, SEXP argASEXP, SEXP argPenaltySEXP, SEXP argLambdaValsSEXP, SEXP argEpsilonSEXP, SEXP argMaxRepSEXP, SEXP argDeltaSEXP, SEXP argVerboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type argY(argYSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type argGraphtype(argGraphtypeSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type argm(argmSEXP);
     Rcpp::traits::input_parameter< SEXP >::type argTheta(argThetaSEXP);
     Rcpp::traits::input_parameter< SEXP >::type argSigma(argSigmaSEXP);
     Rcpp::traits::input_parameter< SEXP >::type argPii(argPiiSEXP);
@@ -49,7 +49,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< SEXP >::type argMaxRep(argMaxRepSEXP);
     Rcpp::traits::input_parameter< SEXP >::type argDelta(argDeltaSEXP);
     Rcpp::traits::input_parameter< SEXP >::type argVerbose(argVerboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(myEm(argY, argGraphtype, argTheta, argSigma, argPii, argArbSigma, argM, argIndex, argMaxAdmm, argCk, argA, argPenalty, argLambdaVals, argEpsilon, argMaxRep, argDelta, argVerbose));
+    rcpp_result_gen = Rcpp::wrap(myEm(argY, argm, argTheta, argSigma, argPii, argArbSigma, argM, argIndex, argMaxAdmm, argCk, argA, argPenalty, argLambdaVals, argEpsilon, argMaxRep, argDelta, argVerbose));
     return rcpp_result_gen;
 END_RCPP
 }

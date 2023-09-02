@@ -139,6 +139,29 @@ Psi reorderResult(const Psi& psi) {
 
   return newPsi;
 }
+
+Rcpp::IntegerVector smallestKIndices(VectorXd vec, int K) {
+  int n = vec.size();
+  
+  if (K <= 0 || K > n) {
+    Rcpp::stop("Invalid value of K");
+  }
+  
+  // Create a vector of indices from 1 to n
+  Rcpp::IntegerVector indices = Rcpp::seq(1, n);
+  
+  // Sort the indices based on the corresponding vector elements
+  std::sort(indices.begin(), indices.end(), [&vec](int a, int b) {
+    return vec(a - 1) < vec(b - 1);
+  });
+  
+  // Extract the first K indices
+  Rcpp::IntegerVector result = Rcpp::head(indices, K);
+  
+  return result;
+}
+
+
 // Generates the graphs
 //gsf
 MatrixXd graphgsf(const MatrixXd& theta) {
@@ -239,11 +262,32 @@ MatrixXd graph1nn(const MatrixXd& theta) {
     }
     graph(k,sResult) = 1;
     graph(sResult,k) = 1;
-    Rcpp::Rcout << "k-th row" << graph.row(k) << "\n";
+    //Rcpp::Rcout << "k-th row" << graph.row(k) << "\n";
   }
   
   return graph;
 }
+
+/*mnn*/
+MatrixXd graphmnn(const MatrixXd& theta, int m) {
+  int K = theta.cols();
+  MatrixXd distances = getDistanceMatrix(theta);
+  MatrixXd graph = MatrixXd::Zero(K,K);
+  Rcpp::IntegerVector nearestm(m, 0);
+  
+  int j, k;
+  
+  // Inductively move towards the nearest neighbor.
+  for (k = 0; k < K; k++) {
+    nearestm = smallestKIndices(distances.col(k),m+1);
+    for (j=1; j < m+1; j++){
+      graph(k,(nearestm(j)-1)) = 1;
+      graph((nearestm(j)-1),k) = 1;
+    }
+  }
+  return graph;
+}
+
 
 //naive
 MatrixXd graphnaive(const MatrixXd& theta) {
@@ -256,7 +300,7 @@ MatrixXd graphnaive(const MatrixXd& theta) {
 
 bool linSearch(const MatrixXd& target, const MatrixXd& list) {
   for (unsigned int i = 0; i < list.cols(); i++) {
-    if (thetaDist(list.col(i), target) == 0) {
+    if (thetaDist(list.col(i), target) < 1e-6) {
       return true;
     }
    }
