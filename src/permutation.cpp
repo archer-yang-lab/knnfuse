@@ -140,28 +140,6 @@ Psi reorderResult(const Psi& psi) {
   return newPsi;
 }
 
-Rcpp::IntegerVector smallestKIndices(VectorXd vec, int K) {
-  int n = vec.size();
-  
-  if (K <= 0 || K > n) {
-    Rcpp::stop("Invalid value of K");
-  }
-  
-  // Create a vector of indices from 1 to n
-  Rcpp::IntegerVector indices = Rcpp::seq(1, n);
-  
-  // Sort the indices based on the corresponding vector elements
-  std::sort(indices.begin(), indices.end(), [&vec](int a, int b) {
-    return vec(a - 1) < vec(b - 1);
-  });
-  
-  // Extract the first K indices
-  Rcpp::IntegerVector result = Rcpp::head(indices, K);
-  
-  return result;
-}
-
-
 // Generates the graphs
 //gsf
 MatrixXd graphgsf(const MatrixXd& theta) {
@@ -273,21 +251,37 @@ MatrixXd graphmnn(const MatrixXd& theta, int m) {
   int K = theta.cols();
   MatrixXd distances = getDistanceMatrix(theta);
   MatrixXd graph = MatrixXd::Zero(K,K);
-  Rcpp::IntegerVector nearestm(m, 0);
   
-  int j, k;
+  //int n = distMatrix.rows();
+  //Eigen::MatrixXd knnGraph(n, n);
   
-  // Inductively move towards the nearest neighbor.
-  for (k = 0; k < K; k++) {
-    nearestm = smallestKIndices(distances.col(k),m+1);
-    for (j=1; j < m+1; j++){
-      graph(k,(nearestm(j)-1)) = 1;
-      graph((nearestm(j)-1),k) = 1;
+  for (int i = 0; i < K; ++i) {
+    // Get distances and indices for the current point
+    Eigen::VectorXd distancesvec = distances.row(i);
+    Eigen::VectorXi indices(K);
+    for (int j = 0; j < K; ++j) {
+      indices(j) = j;
+    }
+    
+    // Exclude self (point i) and sort by distances
+    std::vector<std::pair<double, int>> distIndexPairs;
+    for (int j = 0; j < K; ++j) {
+      if (j != i) {
+        distIndexPairs.push_back(std::make_pair(distancesvec(j), indices(j)));
+      }
+    }
+    std::sort(distIndexPairs.begin(), distIndexPairs.end());
+    
+    // Take the m nearest neighbors
+    for (int j = 0; j < m; ++j) {
+      int neighborIndex = distIndexPairs[j].second;
+      graph(i, neighborIndex) = 1;
+      graph(neighborIndex, i) = 1;
     }
   }
+  
   return graph;
 }
-
 
 //naive
 MatrixXd graphnaive(const MatrixXd& theta) {
@@ -300,7 +294,7 @@ MatrixXd graphnaive(const MatrixXd& theta) {
 
 bool linSearch(const MatrixXd& target, const MatrixXd& list) {
   for (unsigned int i = 0; i < list.cols(); i++) {
-    if (thetaDist(list.col(i), target) < 1e-6) {
+    if (thetaDist(list.col(i), target) == 0) {
       return true;
     }
    }
@@ -323,3 +317,33 @@ int frequency(const MatrixXd& theta) {
 
 	return uniqueThetas.cols();
 }
+
+int countClusters(MatrixXd& graph) {
+  int K = graph.rows();
+  int Order = 0; // Number of clusters
+  
+  // Vector to keep track of visited nodes
+  std::vector<bool> visited(K, false);
+  
+  // Depth-First Search (DFS) function to explore a cluster
+  std::function<void(int)> dfs = [&](int node) {
+    visited[node] = true;
+    
+    for (int i = 0; i < K; ++i) {
+      if (graph(node, i) == 1 && !visited[i]) {
+        dfs(i);
+      }
+    }
+  };
+  
+  for (int i = 0; i < K; ++i) {
+    if (!visited[i]) {
+      // Start a new cluster if the current node is unvisited
+      dfs(i);
+      Order++;
+    }
+  }
+  
+  return Order;
+}
+

@@ -44,7 +44,6 @@ bool isOrdered (int, int);
 double thetaDist (const VectorXd&, const VectorXd&);
 MatrixXd getDistanceMatrix (const MatrixXd&);
 bool find (std::vector<int>, int);
-Rcpp::IntegerVector smallestKIndices(VectorXd vec, int K);
 MatrixXd graphmnn(const MatrixXd& theta, int m);
 MatrixXd graphgsf(const MatrixXd& theta);
 MatrixXd graph1nn(const MatrixXd& theta);
@@ -55,6 +54,7 @@ double fullLogLikFunction(const MatrixXd& y, const MatrixXd& theta, const Vector
 double logLikFunction(const MatrixXd& y, const Psi& psi);
 
 int frequency(const MatrixXd& theta);
+int countClusters(MatrixXd& graph);
 MatrixXd normaltheta (const MatrixXd& y, const MatrixXd& sigma, const MatrixXd& graph, const MatrixXd& wMtx, const MatrixXd& Eta, const MatrixXd& U);
 double etamax(const Matrix<double, 1, Dynamic>& z, double lambada);
 VectorXd softThresholding(const VectorXd& z, double lambda);

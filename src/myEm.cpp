@@ -189,6 +189,7 @@ Psi mem(const MatrixXd& y, const Psi& psi, double lambda) {
     //Rcpp::Rcout << "graph" << graph << "\n";
     oldEstimate = newEstimate;
     newEstimate = mStep(y, oldEstimate, graph, wMatrix(y, oldEstimate), lambda);
+    //Rcpp::Rcout << "diff" << oldEstimate.distance(newEstimate);
     
   } while (counter++ < maxRep && oldEstimate.distance(newEstimate) >= epsilon);
   counter++;
@@ -284,10 +285,10 @@ Psi mStep(const MatrixXd& y, const Psi& psi, const MatrixXd& graph,  const Matri
 //Revised ADMM algorithm
 MatrixXd admm(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const MatrixXd& wMtx, double lambda){
   int k,j, counter = 0;
-  double phi;
   MatrixXd newTheta = MatrixXd::Zero(D, K), 
     oldTheta(D, K), 
-    Eta(D,K*K), 
+    phi = MatrixXd::Zero(K,K), 
+    Eta = MatrixXd::Zero(D,K*K), 
     oldU = MatrixXd::Zero(D,K*K),
     newU = MatrixXd::Zero(D,K*K);
   
@@ -296,8 +297,9 @@ MatrixXd admm(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const Ma
   oldTheta = psi.theta;
   for(k = 0; k < K; k++) {
     for(j = 0; j < K; j++){
+      if (graph(k,j)==1){
       Eta.col(k+K*j) = psi.theta.col(k);
-    }}
+      }}}
   
   do {
     oldTheta = newTheta ; 
@@ -308,9 +310,8 @@ MatrixXd admm(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const Ma
     for(k = 0; k < K; k++) {
       for(j = 0; j < K; j++){
         if (graph(k,j)==1){
-          phi = etamax(newTheta.col(k)+oldU.col(k+K*j)-newTheta.col(j)-oldU.col(j+K*k), lambda);
-          //Rcpp::Rcout << "phi" << phi << ".\n";
-          Eta.col(k+K*j) = phi*(newTheta.col(k)+oldU.col(k+K*j))+(1-phi)*(newTheta.col(j)+oldU.col(j+K*k));
+          phi(k,j) = etamax(newTheta.col(k)+oldU.col(k+K*j)-newTheta.col(j)-oldU.col(j+K*k), lambda);
+          Eta.col(k+K*j) = phi(k,j)*(newTheta.col(k)+oldU.col(k+K*j))+(1-phi(k,j))*(newTheta.col(j)+oldU.col(j+K*k));
         }}}
     //Rcpp::Rcout << "Eta" << Eta.row(1) << ".\n";
     
@@ -326,8 +327,73 @@ MatrixXd admm(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const Ma
     oldU=newU;
     //Rcpp::Rcout << "thetadiff" << (oldTheta - newTheta).norm() << ".\n";
   } while (counter++ < maxadmm && (oldTheta - newTheta).norm() > delta);
-  //Rcpp::Rcout << "ADMMtimes" << counter ;
+  //Rcpp::Rcout << "Theta" << newTheta.row(0) << ".\n";
+  //Rcpp::Rcout << "Phi" << phi << ".\n";
+  //Rcpp::Rcout << "Eta68" << Eta.col(5+K*7) << "Eta610" << Eta.col(5+K*9) << ".\n";
+  //Rcpp::Rcout << "Eta68-Eta610" << Eta.col(5+K*7) - Eta.col(5+K*9); 
+  //Rcpp::Rcout << "Eta97-Eta98" << Eta(0,8+K*6)-Eta(0,8+K*7);
+  for(k = 0; k < K; k++) {
+    for(j = 0; j < K; j++){
+      if (graph(k,j)==1){
+        newTheta.col(k) = Eta.col(k+K*j);
+        }}}
   return newTheta;
+}
+
+int freq(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const MatrixXd& wMtx, double lambda){
+  int k,j, counter = 0;
+  MatrixXd newTheta = MatrixXd::Zero(D, K), 
+    oldTheta(D, K), 
+    phi = MatrixXd::Zero(K,K), 
+    Eta = MatrixXd::Zero(D,K*K), 
+    oldU = MatrixXd::Zero(D,K*K),
+    newU = MatrixXd::Zero(D,K*K);
+  
+  //Initialize theta
+  
+  oldTheta = psi.theta;
+  for(k = 0; k < K; k++) {
+    for(j = 0; j < K; j++){
+      if (graph(k,j)==1){
+      Eta.col(k+K*j) = psi.theta.col(k);
+      }}}
+  
+  do {
+    oldTheta = newTheta ; 
+    newTheta = (*updateTheta)(y, psi.sigma, graph, wMtx, Eta, oldU);
+    //Rcpp::Rcout << "Theta" << newTheta.row(1) << ".\n";
+    
+    //update Eta
+    for(k = 0; k < K; k++) {
+      for(j = 0; j < K; j++){
+        if (graph(k,j)==1){
+          phi(k,j) = etamax(newTheta.col(k)+oldU.col(k+K*j)-newTheta.col(j)-oldU.col(j+K*k), lambda);
+          Eta.col(k+K*j) = phi(k,j)*(newTheta.col(k)+oldU.col(k+K*j))+(1-phi(k,j))*(newTheta.col(j)+oldU.col(j+K*k));
+        }}}
+    //Rcpp::Rcout << "Eta" << Eta.row(1) << ".\n";
+    
+    
+    //update U
+    for(k = 0; k < K; k++) {
+      for(j = 0; j < K; j++){
+        if (graph(k,j)==1){
+          newU.col(k+K*j)=oldU.col(k+K*j)+newTheta.col(k)-Eta.col(k+K*j);
+        }}}
+    //Rcpp::Rcout << "oldU" << oldU.row(1) << ".\n";
+    //Rcpp::Rcout << "newU" << newU.row(1) << ".\n";
+    oldU=newU;
+    //Rcpp::Rcout << "thetadiff" << (oldTheta - newTheta).norm() << ".\n";
+  } while (counter++ < maxadmm && (oldTheta - newTheta).norm() > delta);
+  
+  for(k = 0; k < K; k++) {
+    for(j = 0; j < K; j++){
+      if (phi(k,j) == 0.5){
+        phi(k,j) = 1;
+      }else {
+        phi(k,j) = 0;
+      }
+      }}
+  return countClusters(phi);
 }
 
 // Proximal Gradient Descent Algorithm. 
@@ -491,8 +557,8 @@ Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const Ve
  
      psi = mem(y, psi, lambdaScale * lambdaList(i));
 
-      if (verbose) 
-        Rcpp::Rcout << "Estimate: \n" << invTransf(psi.theta, psi.sigma) << "\n\n";
+      //if (verbose) 
+        //Rcpp::Rcout << "Estimate: \n" << invTransf(psi.theta, psi.sigma) << "\n\n";
    
     } catch (const char* error) {
       throw error;
@@ -520,7 +586,7 @@ Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const Ve
     }
 
     thisEstimate["lambda"] = lambdaList(i); 
-    thisEstimate["order"]  = frequency(psi.theta);
+    thisEstimate["order"]  = freq(y,psi,graphmnn(psi.theta, m),wMatrix(y,psi), lambdaScale * lambdaList(i));
     thisEstimate["pii"]    = pii;
 
     switch (modelIndex) {

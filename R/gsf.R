@@ -86,13 +86,13 @@ normalLocOrder <- function (y, m, lambdas, K = NULL, sigma = NULL, arbSigma = TR
   if (is.null(input[["a"]])) a <- 3.7
   else a <- input[["a"]]
   
-  if (is.null(input[["convADMM"]])) delta <- 1e-5
+  if (is.null(input[["convADMM"]])) delta <- 1e-8
   else delta <- input[["convADMM"]]
   
   if (is.null(input[["convMem"]])) epsilon <- 1e-8
   else epsilon <- input[["convMem"]]
   
-  if (is.null(input[["maxadmm"]])) maxadmm <- 200
+  if (is.null(input[["maxadmm"]])) maxadmm <- 1000
   else maxMem <- input[["maxadmm"]]
   
   if (is.null(input[["maxMem"]])) maxMem <- 2500
