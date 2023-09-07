@@ -1,6 +1,6 @@
 #include "gsf.h"
 
-int m, K, N, D, n, M, graphtype, maxadmm, maxPgd, maxRep, lambdaIter, modelIndex, penalty;
+int m, K, N, D, n, M, graphtype, maxadmm, maxNR,maxPgd, maxRep, lambdaIter, modelIndex, penalty;
 double epsilon, u, ck, tau1, a, delta,  
 lambdaScale, uBound, H, alStart;
 
@@ -16,7 +16,7 @@ MatrixXd (*T)(const MatrixXd&);
 double   (*density)(const Matrix<double, 1, Dynamic>&, const Matrix<double, Dynamic, 1>&, const MatrixXd&);
 MatrixXd (*invTransf)(const MatrixXd&, const MatrixXd&);
 MatrixXd (*Graphmat)(const MatrixXd&);
-MatrixXd (*updateTheta)(const MatrixXd& , const MatrixXd&, const MatrixXd&, const MatrixXd&, const MatrixXd&, const MatrixXd& );
+MatrixXd (*updateTheta)(const MatrixXd& , const Psi& psi, const MatrixXd&, const MatrixXd&, const MatrixXd&, const MatrixXd& );
 VectorXd (*updateEta)(double, const Matrix<double, 1, Dynamic>&, double, double);
 VectorXd (*updateEtaLLA)(double, const Matrix<double, 1, Dynamic>&, const Matrix<double, 1, Dynamic>&, double, double);
 bool     (*constrCheck)(const MatrixXd&);
@@ -34,9 +34,9 @@ bool uCheck(double u, const MatrixXd& y, const MatrixXd& oldEta, const MatrixXd&
 // [[Rcpp::export(.myEm)]]
 extern "C" Rcpp::List myEm(SEXP argY, SEXP argm, SEXP argTheta, SEXP argSigma, 
                           SEXP argPii, SEXP argArbSigma, SEXP argM, 
-                          SEXP argIndex, SEXP argMaxAdmm, SEXP argCk, SEXP argA, 
+                          SEXP argIndex, SEXP argMaxAdmm, SEXP argMaxNR, SEXP argCk, SEXP argA, 
                           SEXP argPenalty, SEXP argLambdaVals, SEXP argEpsilon, 
-                          SEXP argMaxRep, SEXP argDelta,
+                          SEXP argDelta, SEXP argMaxRep, 
                           SEXP argVerbose){
   MatrixXd theta  = Rcpp::as<MatrixXd> (argTheta);      // Size D x K.
   //MatrixXd Graph  = Rcpp::as<MatrixXd> (argGraph);      // Size K x K.
@@ -49,6 +49,7 @@ extern "C" Rcpp::List myEm(SEXP argY, SEXP argm, SEXP argTheta, SEXP argSigma,
   ck              = Rcpp::as<double> (argCk);           // Parameter for penalty on the pi_k.
   epsilon         = Rcpp::as<double> (argEpsilon);      // Convergence criterion for EM algorithm.
   maxadmm         = Rcpp::as<int> (argMaxAdmm);
+  maxNR           = Rcpp::as<int> (argMaxNR);
   //  maxPgd          = Rcpp::as<int> (argMaxPgd);          // Maximum number of repetetitions of the PGD algorithm.
   maxRep          = Rcpp::as<int> (argMaxRep);          // Maximum EM iterations.
   a               = Rcpp::as<double> (argA);            // Parameter for the SCAD or MCP penalty.  
@@ -135,7 +136,8 @@ extern "C" Rcpp::List myEm(SEXP argY, SEXP argm, SEXP argTheta, SEXP argSigma,
     
     break;
     // User selected a multinomial mixture.
-  case 3: gradB       = &gradBMultinomial;
+  case 3: updateTheta = &multinomialtheta;
+    gradB       = &gradBMultinomial;
     b           = &bMultinomial; 
     T           = &tMultinomial;
     density     = &densityMultinomial;
@@ -189,10 +191,16 @@ Psi mem(const MatrixXd& y, const Psi& psi, double lambda) {
     //Rcpp::Rcout << "graph" << graph << "\n";
     oldEstimate = newEstimate;
     newEstimate = mStep(y, oldEstimate, graph, wMatrix(y, oldEstimate), lambda);
-    //Rcpp::Rcout << "diff" << oldEstimate.distance(newEstimate);
+    Rcpp::Rcout << "diff" << oldEstimate.distance(newEstimate);
+    Rcpp::Rcout << "thetaEM" << newEstimate.theta.row(0);
+    Rcpp::Rcout << "piiEM" << newEstimate.pii;
     
   } while (counter++ < maxRep && oldEstimate.distance(newEstimate) >= epsilon);
-  counter++;
+  
+  Rcpp::Rcout << "thetaEMfinal" << newEstimate.theta.row(0)<< "\n";
+  Rcpp::Rcout << "sigmaEMfinal" << newEstimate.sigma<< "\n";
+  Rcpp::Rcout << "piiEMfinal" << newEstimate.pii<< "\n";
+  
   
   if (verbose) {
     Rcpp::Rcout << "Total MEM iterations: " << counter << ".\n";
@@ -291,6 +299,8 @@ MatrixXd admm(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const Ma
     Eta = MatrixXd::Zero(D,K*K), 
     oldU = MatrixXd::Zero(D,K*K),
     newU = MatrixXd::Zero(D,K*K);
+  Psi psitemp;
+  psitemp = psi;
   
   //Initialize theta
   
@@ -303,7 +313,8 @@ MatrixXd admm(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const Ma
   
   do {
     oldTheta = newTheta ; 
-    newTheta = (*updateTheta)(y, psi.sigma, graph, wMtx, Eta, oldU);
+    psitemp.theta = oldTheta;
+    newTheta = (*updateTheta)(y, psitemp, graph, wMtx, Eta, oldU);
     //Rcpp::Rcout << "Theta" << newTheta.row(1) << ".\n";
     
     //update Eta
@@ -332,11 +343,6 @@ MatrixXd admm(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const Ma
   //Rcpp::Rcout << "Eta68" << Eta.col(5+K*7) << "Eta610" << Eta.col(5+K*9) << ".\n";
   //Rcpp::Rcout << "Eta68-Eta610" << Eta.col(5+K*7) - Eta.col(5+K*9); 
   //Rcpp::Rcout << "Eta97-Eta98" << Eta(0,8+K*6)-Eta(0,8+K*7);
-  for(k = 0; k < K; k++) {
-    for(j = 0; j < K; j++){
-      if (graph(k,j)==1){
-        newTheta.col(k) = Eta.col(k+K*j);
-        }}}
   return newTheta;
 }
 
@@ -360,7 +366,7 @@ int freq(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const MatrixX
   
   do {
     oldTheta = newTheta ; 
-    newTheta = (*updateTheta)(y, psi.sigma, graph, wMtx, Eta, oldU);
+    newTheta = (*updateTheta)(y, psi, graph, wMtx, Eta, oldU);
     //Rcpp::Rcout << "Theta" << newTheta.row(1) << ".\n";
     
     //update Eta
@@ -556,9 +562,9 @@ Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const Ve
     try {
  
      psi = mem(y, psi, lambdaScale * lambdaList(i));
-
-      //if (verbose) 
-        //Rcpp::Rcout << "Estimate: \n" << invTransf(psi.theta, psi.sigma) << "\n\n";
+    Rcpp::Rcout << "thetafinal" << psi.theta << ".\n";
+      if (verbose) 
+        Rcpp::Rcout << "Estimate: \n" << invTransf(psi.theta, psi.sigma) << "\n\n";
    
     } catch (const char* error) {
       throw error;

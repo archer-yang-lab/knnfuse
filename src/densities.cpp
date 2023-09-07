@@ -138,6 +138,27 @@ MatrixXd gradBMultinomial (const MatrixXd& theta, const MatrixXd& sigma) {
   return out;
 }
 
+MatrixXd hesBMultinomial (const VectorXd& theta, const MatrixXd& sigma) {
+  int D = theta.rows();  // Dimension of the parameter space.
+  
+  MatrixXd out(D,D);
+  int j;
+  double temp;
+  MatrixXd exptheta(D,1), diag = MatrixXd::Zero(D,D);
+
+    temp = 1.0;
+    
+    for (j = 0; j < D; j++) {
+      temp += exp(theta(j));
+      diag(j,j) = exp(theta(j));
+      exptheta(j,0) = exp(theta(j));
+    }
+    
+    out= M * (1/temp * diag - 1/pow(temp,2) * exptheta * exptheta.transpose());
+  
+  return out;
+}
+
 double bMultinomial (const VectorXd& theta, const MatrixXd& sigma) {
   D = theta.rows();  // Dimension of the parameter space.
   

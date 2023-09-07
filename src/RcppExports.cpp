@@ -27,8 +27,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // myEm
-extern "C" Rcpp::List myEm(SEXP argY, SEXP argm, SEXP argTheta, SEXP argSigma, SEXP argPii, SEXP argArbSigma, SEXP argM, SEXP argIndex, SEXP argMaxAdmm, SEXP argCk, SEXP argA, SEXP argPenalty, SEXP argLambdaVals, SEXP argEpsilon, SEXP argMaxRep, SEXP argDelta, SEXP argVerbose);
-RcppExport SEXP _GroupSortFuse2_myEm(SEXP argYSEXP, SEXP argmSEXP, SEXP argThetaSEXP, SEXP argSigmaSEXP, SEXP argPiiSEXP, SEXP argArbSigmaSEXP, SEXP argMSEXP, SEXP argIndexSEXP, SEXP argMaxAdmmSEXP, SEXP argCkSEXP, SEXP argASEXP, SEXP argPenaltySEXP, SEXP argLambdaValsSEXP, SEXP argEpsilonSEXP, SEXP argMaxRepSEXP, SEXP argDeltaSEXP, SEXP argVerboseSEXP) {
+extern "C" Rcpp::List myEm(SEXP argY, SEXP argm, SEXP argTheta, SEXP argSigma, SEXP argPii, SEXP argArbSigma, SEXP argM, SEXP argIndex, SEXP argMaxAdmm, SEXP argMaxNR, SEXP argCk, SEXP argA, SEXP argPenalty, SEXP argLambdaVals, SEXP argEpsilon, SEXP argDelta, SEXP argMaxRep, SEXP argVerbose);
+RcppExport SEXP _GroupSortFuse2_myEm(SEXP argYSEXP, SEXP argmSEXP, SEXP argThetaSEXP, SEXP argSigmaSEXP, SEXP argPiiSEXP, SEXP argArbSigmaSEXP, SEXP argMSEXP, SEXP argIndexSEXP, SEXP argMaxAdmmSEXP, SEXP argMaxNRSEXP, SEXP argCkSEXP, SEXP argASEXP, SEXP argPenaltySEXP, SEXP argLambdaValsSEXP, SEXP argEpsilonSEXP, SEXP argDeltaSEXP, SEXP argMaxRepSEXP, SEXP argVerboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -41,22 +41,23 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< SEXP >::type argM(argMSEXP);
     Rcpp::traits::input_parameter< SEXP >::type argIndex(argIndexSEXP);
     Rcpp::traits::input_parameter< SEXP >::type argMaxAdmm(argMaxAdmmSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type argMaxNR(argMaxNRSEXP);
     Rcpp::traits::input_parameter< SEXP >::type argCk(argCkSEXP);
     Rcpp::traits::input_parameter< SEXP >::type argA(argASEXP);
     Rcpp::traits::input_parameter< SEXP >::type argPenalty(argPenaltySEXP);
     Rcpp::traits::input_parameter< SEXP >::type argLambdaVals(argLambdaValsSEXP);
     Rcpp::traits::input_parameter< SEXP >::type argEpsilon(argEpsilonSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type argMaxRep(argMaxRepSEXP);
     Rcpp::traits::input_parameter< SEXP >::type argDelta(argDeltaSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type argMaxRep(argMaxRepSEXP);
     Rcpp::traits::input_parameter< SEXP >::type argVerbose(argVerboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(myEm(argY, argm, argTheta, argSigma, argPii, argArbSigma, argM, argIndex, argMaxAdmm, argCk, argA, argPenalty, argLambdaVals, argEpsilon, argMaxRep, argDelta, argVerbose));
+    rcpp_result_gen = Rcpp::wrap(myEm(argY, argm, argTheta, argSigma, argPii, argArbSigma, argM, argIndex, argMaxAdmm, argMaxNR, argCk, argA, argPenalty, argLambdaVals, argEpsilon, argDelta, argMaxRep, argVerbose));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
     {"_GroupSortFuse2_bicLogLik", (DL_FUNC) &_GroupSortFuse2_bicLogLik, 5},
-    {"_GroupSortFuse2_myEm", (DL_FUNC) &_GroupSortFuse2_myEm, 17},
+    {"_GroupSortFuse2_myEm", (DL_FUNC) &_GroupSortFuse2_myEm, 18},
     {NULL, NULL, 0}
 };
 

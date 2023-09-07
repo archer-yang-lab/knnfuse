@@ -1,5 +1,4 @@
 #include <Rcpp.h>
-
 #include <RcppEigen.h>
 #include <iostream>
 #include <float.h>
@@ -11,9 +10,9 @@
 
 using namespace Eigen;
 
-extern int K, D, N, n, M, graphtype; 
-extern double upsilon;
-extern bool arbSigma;
+extern int K, D, N, n, M, m, graphtype, maxadmm, maxPgd, maxNR, maxRep, lambdaIter, modelIndex, penalty;
+extern double epsilon, u, ck, tau1, a, delta, lambdaScale, uBound, H, alStart;
+extern bool arbSigma, verbose;
 
 typedef struct PsiStruct {
   VectorXd pii;
@@ -55,7 +54,8 @@ double logLikFunction(const MatrixXd& y, const Psi& psi);
 
 int frequency(const MatrixXd& theta);
 int countClusters(MatrixXd& graph);
-MatrixXd normaltheta (const MatrixXd& y, const MatrixXd& sigma, const MatrixXd& graph, const MatrixXd& wMtx, const MatrixXd& Eta, const MatrixXd& U);
+MatrixXd normaltheta (const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const MatrixXd& wMtx, const MatrixXd& Eta, const MatrixXd& U);
+MatrixXd multinomialtheta (const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const MatrixXd& wMtx, const MatrixXd& Eta, const MatrixXd& U);
 double etamax(const Matrix<double, 1, Dynamic>& z, double lambada);
 VectorXd softThresholding(const VectorXd& z, double lambda);
 VectorXd adaptiveLassoUpdate(double u, const Matrix<double, 1, Dynamic>& z, double lambda, double a);
@@ -81,6 +81,7 @@ double densityMultinomial(const Matrix<double, 1, Dynamic>& y,
                           const MatrixXd& sigma);
 MatrixXd gradBMultinomial (const MatrixXd& theta, const MatrixXd& sigma);
 double bMultinomial (const VectorXd& theta, const MatrixXd& sigma);
+MatrixXd hesBMultinomial (const VectorXd& theta, const MatrixXd& sigma);
 MatrixXd tMultinomial (const MatrixXd& y);
 MatrixXd transfMultinomial (const MatrixXd&);
 MatrixXd invTransfMultinomial (const MatrixXd&, const MatrixXd&);

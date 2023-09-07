@@ -86,7 +86,7 @@ normalLocOrder <- function (y, m, lambdas, K = NULL, sigma = NULL, arbSigma = TR
   if (is.null(input[["a"]])) a <- 3.7
   else a <- input[["a"]]
   
-  if (is.null(input[["convADMM"]])) delta <- 1e-8
+  if (is.null(input[["convADMM"]])) delta <- 1e-5
   else delta <- input[["convADMM"]]
   
   if (is.null(input[["convMem"]])) epsilon <- 1e-8
@@ -94,6 +94,9 @@ normalLocOrder <- function (y, m, lambdas, K = NULL, sigma = NULL, arbSigma = TR
   
   if (is.null(input[["maxadmm"]])) maxadmm <- 1000
   else maxMem <- input[["maxadmm"]]
+  
+  if (is.null(input[["maxNR"]])) maxNR <- 100
+  else maxMem <- input[["maxNR"]]
   
   if (is.null(input[["maxMem"]])) maxMem <- 2500
   else maxMem <- input[["maxMem"]]
@@ -114,15 +117,15 @@ normalLocOrder <- function (y, m, lambdas, K = NULL, sigma = NULL, arbSigma = TR
   if (!is.null(mu) && !is.null(pii)) { #when the starting values are pre-specified
     if (arbSigma) sigma <- cov(y)
     
-    out <- .myEm(y, M, mu, sigma, pii, arbSigma, -1, 1, maxadmm, C, a,
-                 .penCode(penalty), lambdas, epsilon, maxMem,delta, verbose)
+    out <- .myEm(y, m, mu, sigma, pii, arbSigma, -1, 1, maxadmm, maxNR, C, a,
+                 .penCode(penalty), lambdas, epsilon, delta, maxMem, verbose)
     
   } else if (!is.null(mu) && is.null(pii)) {
     K <- ncol(mu)
     if (arbSigma) sigma <- cov(y)
     
-    out <- .myEm(y, m, mu, sigma, rep(1.0/K, K), arbSigma,-1, 1, maxadmm, C, a,
-                 .penCode(penalty), lambdas, epsilon, maxMem, delta, verbose)
+    out <- .myEm(y, m, mu, sigma, rep(1.0/K, K), arbSigma,-1, 1, maxadmm, maxNR, C, a,
+                 .penCode(penalty), lambdas, epsilon, delta, maxMem,  verbose)
     
   } else {
     if (is.null(pii)) {
@@ -153,8 +156,8 @@ normalLocOrder <- function (y, m, lambdas, K = NULL, sigma = NULL, arbSigma = TR
       theta[,k] <- as.vector(rmvnorm(1, mu = as.vector(hypTheta[[k]]), Sigma = sigma))
     }
     
-    out <- .myEm(y, m, theta, sigma, pii, arbSigma, -1, 1, maxadmm, C, a,
-                 .penCode(penalty), lambdas, epsilon, maxMem, delta, verbose)
+    out <- .myEm(y, m, theta, sigma, pii, arbSigma, -1, 1, maxadmm, maxNR, C, a,
+                 .penCode(penalty), lambdas, epsilon, delta, maxMem,  verbose)
   }
   
   class(out) <- c("normalLocGsf", "gsf")
@@ -221,7 +224,7 @@ normalLocOrder <- function (y, m, lambdas, K = NULL, sigma = NULL, arbSigma = TR
 #'  out <- multinomialOrder(pollen, K=12, lambdas=seq(0.1, 1.6, 0.2))
 #'  tuning <- bicTuning(pollen, out)
 #'  plot(out, eta=TRUE, gg=FALSE, opt=tuning$result$lambda)
-multinomialOrder <- function(y, lambdas, K = NULL, ...) {
+multinomialOrder <- function(y, m, lambdas, K = NULL, ...) {
   input <- list(...)
 
   theta <- input$theta
@@ -247,12 +250,15 @@ multinomialOrder <- function(y, lambdas, K = NULL, ...) {
 
   if (is.null(input[["convMem"]])) epsilon <- 1e-8
   else epsilon <- input[["convMem"]]
+  
+  if (is.null(input[["maxadmm"]])) maxadmm <- 500
+  else maxMem <- input[["maxadmm"]]
+  
+  if (is.null(input[["maxNR"]])) maxNR <- 10
+  else maxMem <- input[["maxNR"]]
 
   if (is.null(input[["maxMem"]])) maxMem <- 2500
   else maxMem <- input[["maxMem"]]
-
-  if (is.null(input[["maxPgd"]])) maxPgd <- 1500
-  else maxPgd <- input[["maxPgd"]]
 
   if (is.null(input[["verbose"]])) verbose <- T
   else verbose <- input[["verbose"]]
@@ -261,17 +267,17 @@ multinomialOrder <- function(y, lambdas, K = NULL, ...) {
     y <- as.matrix(y)
   }
 
-  .validateParams(y, theta, "theta", pii, K)
-  .validateOther(maxMem, maxPgd, lambdas, penalty, a, C, epsilon, delta)
-  .validateMultinomial(y, theta, mcmcIter)
+  # .validateParams(y, theta, "theta", pii, K)
+  # .validateOther(maxMem, maxPgd, lambdas, penalty, a, C, epsilon, delta)
+  # .validateMultinomial(y, theta, mcmcIter)
 
   lambdas <- sort(lambdas)
 
   D <- ncol(y) - 1
 
   if(is.null(K)) {
-    out <- .completeMultinomialCols(.myEm(y[, 1:D], theta[1:D, ], diag(D), pii, FALSE, sum(y[1,]), 3, C, a,
-                .penCode(penalty), lambdas, epsilon, delta, maxMem, maxPgd, uBound, verbose, 0))
+    out <- .completeMultinomialCols(.myEm(y[, 1:D], m, theta[1:D, ], diag(D), pii, FALSE, sum(y[1,]), 3, maxadmm, maxNR, C, a,
+                .penCode(penalty), lambdas, epsilon, delta, maxMem, verbose))
   } else {
     n <- nrow(y)
 
@@ -303,8 +309,8 @@ multinomialOrder <- function(y, lambdas, K = NULL, ...) {
       newPii <- as.matrix(pii)
     }
 
-    out <- .completeMultinomialCols(.myEm(y[,1:D], newTheta[1:D, ], diag(D), newPii, FALSE, sum(y[1,]), 3, C, a, 
-                .penCode(penalty), lambdas, epsilon, delta, maxMem, maxPgd, uBound, verbose, 0))
+    out <- .completeMultinomialCols(.myEm(y[,1:D], m, newTheta[1:D, ], diag(D), newPii, FALSE, sum(y[1,]), 3, maxadmm, maxNR, C, a,
+                                          .penCode(penalty), lambdas, epsilon, delta, maxMem, verbose))
   }
    
   class(out) <- c("multinomialGsf", "gsf")

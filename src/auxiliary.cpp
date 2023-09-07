@@ -1,9 +1,9 @@
 #include "gsf.h"
 
-MatrixXd normaltheta (const MatrixXd& y, const MatrixXd& sigma, const MatrixXd& graph, const MatrixXd& wMtx, const MatrixXd& Eta, const MatrixXd& U){
+MatrixXd normaltheta (const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const MatrixXd& wMtx, const MatrixXd& Eta, const MatrixXd& U){
   int k,d,i,j;
   MatrixXd Theta =  MatrixXd::Zero(D,K);
-  MatrixXd A(D,D), Ainv(D,D),
+  MatrixXd A(D,D), 
   B(D,1),
   C(D,1);
   MatrixXd I = MatrixXd::Zero(D,D);
@@ -18,8 +18,7 @@ MatrixXd normaltheta (const MatrixXd& y, const MatrixXd& sigma, const MatrixXd& 
     I(d,d)=1 ;
   }
   for(k = 0; k < K; k++) {
-    A = wMtxSums[k]*sigma+graph.col(k).sum()*I;
-    Ainv = A.inverse();
+    A = wMtxSums[k]*psi.sigma+graph.col(k).sum()*I;
     //Rcpp::Rcout << "A" << A <<"\n";
     //Rcpp::Rcout << "A.inverse" << Ainv <<"\n";
     B = MatrixXd::Zero(D,1);
@@ -35,13 +34,77 @@ MatrixXd normaltheta (const MatrixXd& y, const MatrixXd& sigma, const MatrixXd& 
         C = C + Eta.col(k+K*j)-U.col(k+K*j);
       }
     }
-    Theta.col(k) = Ainv * (B + C) ;
+    Theta.col(k) = A.ldlt().solve(B + C) ;
     //Rcpp::Rcout << "B" << B <<"\n";
     //Rcpp::Rcout << "C" << C <<"\n";
     //Rcpp::Rcout << "Theta.col" << Theta.col(k) <<"\n";
   } 
   return Theta;
 }
+
+MatrixXd multinomialtheta (const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const MatrixXd& wMtx, const MatrixXd& Eta, const MatrixXd& U){
+  int i,k,j, counter = 0;
+  MatrixXd newTheta = MatrixXd::Zero(D, K), 
+    oldTheta= psi.theta;
+  MatrixXd gradB(D,K), gradh(D,1), hesh(D,D);
+  MatrixXd A(D,D),
+  B(D,1),
+  C(D,1);
+  MatrixXd I = MatrixXd::Zero(D,D);
+  
+  VectorXd wMtxSums(K);
+  
+  for(k = 0; k < K; k++) {
+    wMtxSums(k) = wMtx.col(k).sum();
+  }
+  
+  for(j=0 ; j < D; j++){
+    I(j,j)=1 ;
+  }
+  
+  //Rcpp::Rcout << "oldTheta" << oldTheta.row(0);
+  
+  do {
+    oldTheta = newTheta ;   
+    gradB = gradBMultinomial(oldTheta, psi.sigma);
+  
+  for(k = 0; k < K; k++) {
+    gradh = MatrixXd::Zero(D,1);
+    hesh = MatrixXd::Zero(D,D);
+    
+    A = wMtxSums[k]* gradB.col(k);
+    //Rcpp::Rcout << "A" << A <<"\n";
+    B = MatrixXd::Zero(D,1);
+    
+    for (i=0; i < n; i++){
+      B = B + wMtx(i,k)*y.row(i).transpose();
+      //Rcpp::Rcout << "B2" << B.row(1)<< "w" << wMtx(i,k) << "y" << y.row(i);
+    }
+    //Rcpp::Rcout << "B" << B <<"\n";
+    C = MatrixXd::Zero(D,1);
+    for (j = 0 ; j < K; j++){
+      if (graph(k,j)==1){
+        //Rcpp::Rcout << "k=" << k << "j=" << j <<"\n";
+        C = C + oldTheta.col(k) - Eta.col(k+K*j) + U.col(k+K*j);
+      }
+    }
+    //Rcpp::Rcout << "B" << B <<"\n";
+    gradh = A - B + C ;
+    hesh = wMtxSums[k]* hesBMultinomial(oldTheta.col(k), psi.sigma) + graph.col(k).sum()*I;
+    //Rcpp::Rcout << "hessian" << hesh <<"\n";
+  
+  newTheta.col(k) = oldTheta.col(k) - hesh.ldlt().solve(gradh);
+  }
+  //Rcpp::Rcout << "diffintheta" << (oldTheta - newTheta).norm()<< "\n";
+  } while (counter++ < maxNR && (oldTheta - newTheta).norm() > delta);
+  //Rcpp::Rcout << "counterNR" << counter<< "\n";
+  
+  //Rcpp::Rcout << "newTheta" << newTheta.row(0);
+  
+  return newTheta;
+  }
+
+
 
 double etamax(const Matrix<double, 1, Dynamic>& z, double lambda){
   double normZ = z.norm(), u;
