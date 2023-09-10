@@ -27,6 +27,7 @@ Psi mem(const MatrixXd&, const Psi&, double);
 Matrix<double, Dynamic, Dynamic> wMatrix(const MatrixXd& y, const Psi&);
 Psi mStep(const MatrixXd& , const Psi& , const MatrixXd& ,  const MatrixXd& , double );
 MatrixXd admm(const MatrixXd& , const Psi&, const MatrixXd&, const MatrixXd&, double );
+MatrixXd graphrep(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const MatrixXd& wMtx, double lambda);
 MatrixXd pgd(const MatrixXd&, const Psi&, const MatrixXd&, double lambda) ;
 bool uCheck(double u, const MatrixXd& y, const MatrixXd& oldEta, const MatrixXd& newEta, const MatrixXd& sigma, const VectorXd& wMtxSums);
 
@@ -191,20 +192,12 @@ Psi mem(const MatrixXd& y, const Psi& psi, double lambda) {
     //Rcpp::Rcout << "graph" << graph << "\n";
     oldEstimate = newEstimate;
     newEstimate = mStep(y, oldEstimate, graph, wMatrix(y, oldEstimate), lambda);
-    Rcpp::Rcout << "diff" << oldEstimate.distance(newEstimate);
-    Rcpp::Rcout << "thetaEM" << newEstimate.theta.row(0);
-    Rcpp::Rcout << "piiEM" << newEstimate.pii;
-    
   } while (counter++ < maxRep && oldEstimate.distance(newEstimate) >= epsilon);
   
-  Rcpp::Rcout << "thetaEMfinal" << newEstimate.theta.row(0)<< "\n";
-  Rcpp::Rcout << "sigmaEMfinal" << newEstimate.sigma<< "\n";
-  Rcpp::Rcout << "piiEMfinal" << newEstimate.pii<< "\n";
   
-  
-  if (verbose) {
-    Rcpp::Rcout << "Total MEM iterations: " << counter << ".\n";
-  }
+  //if (verbose) {
+    //Rcpp::Rcout << "Total MEM iterations: " << counter << ".\n";
+  //}
   
   return newEstimate;
 }
@@ -346,7 +339,7 @@ MatrixXd admm(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const Ma
   return newTheta;
 }
 
-int freq(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const MatrixXd& wMtx, double lambda){
+MatrixXd graphrep(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const MatrixXd& wMtx, double lambda){
   int k,j, counter = 0;
   MatrixXd newTheta = MatrixXd::Zero(D, K), 
     oldTheta(D, K), 
@@ -399,7 +392,7 @@ int freq(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const MatrixX
         phi(k,j) = 0;
       }
       }}
-  return countClusters(phi);
+  return phi;
 }
 
 // Proximal Gradient Descent Algorithm. 
@@ -535,7 +528,7 @@ double logLikFunction(const MatrixXd& y, const Psi& psi){
 Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const VectorXd& lambdaList){
   Psi psi = startingVals, minPsi;
   int i, k;
-  MatrixXd transfTheta;
+  MatrixXd transfTheta,finalgraph;
   
   Rcpp::List estimates;
   Rcpp::NumericVector rbicVals, orders, loglikVals;
@@ -556,15 +549,15 @@ Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const Ve
     Rcpp::NumericVector pii;
     Rcpp::CharacterVector names(K);
 
-    if (verbose) 
-      Rcpp::Rcout << "Lambda " << lambdaList(i) << ".\n";
+    //if (verbose) 
+      //Rcpp::Rcout << "Lambda " << lambdaList(i) << ".\n";
 
     try {
  
      psi = mem(y, psi, lambdaScale * lambdaList(i));
-    Rcpp::Rcout << "thetafinal" << psi.theta << ".\n";
-      if (verbose) 
-        Rcpp::Rcout << "Estimate: \n" << invTransf(psi.theta, psi.sigma) << "\n\n";
+      
+      //if (verbose) 
+        //Rcpp::Rcout << "Estimate: \n" << invTransf(psi.theta, psi.sigma) << "\n\n";
    
     } catch (const char* error) {
       throw error;
@@ -592,7 +585,9 @@ Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const Ve
     }
 
     thisEstimate["lambda"] = lambdaList(i); 
-    thisEstimate["order"]  = freq(y,psi,graphmnn(psi.theta, m),wMatrix(y,psi), lambdaScale * lambdaList(i));
+    finalgraph = graphrep(y,psi,graphmnn(psi.theta, m),wMatrix(y,psi), lambdaScale * lambdaList(i));
+    thisEstimate["graph"]  = finalgraph;
+    thisEstimate["order"]  = countClusters(finalgraph);
     thisEstimate["pii"]    = pii;
 
     switch (modelIndex) {
