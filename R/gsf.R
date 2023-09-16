@@ -152,7 +152,6 @@ normalLocOrder <- function (y, m, lambdas, K = NULL, sigma = NULL, arbSigma = TR
     
     theta <- matrix(NA, ncol(y), K)
     for(k in 1:K) {
-      set.seed(2023)
       theta[,k] <- as.vector(rmvnorm(1, mu = as.vector(hypTheta[[k]]), Sigma = sigma))
     }
     

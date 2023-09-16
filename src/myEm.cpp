@@ -195,9 +195,9 @@ Psi mem(const MatrixXd& y, const Psi& psi, double lambda) {
   } while (counter++ < maxRep && oldEstimate.distance(newEstimate) >= epsilon);
   
   
-  //if (verbose) {
-    //Rcpp::Rcout << "Total MEM iterations: " << counter << ".\n";
-  //}
+  // if (verbose) {
+  //   Rcpp::Rcout << "Total MEM iterations: " << counter << ".\n";
+  // }
   
   return newEstimate;
 }
@@ -526,7 +526,7 @@ double logLikFunction(const MatrixXd& y, const Psi& psi){
 }
 
 Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const VectorXd& lambdaList){
-  Psi psi = startingVals, minPsi;
+  Psi psi = startingVals, oldpsi = startingVals, newpsi;
   int i, k;
   MatrixXd transfTheta,finalgraph;
   
@@ -551,17 +551,19 @@ Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const Ve
 
     //if (verbose) 
       //Rcpp::Rcout << "Lambda " << lambdaList(i) << ".\n";
-
+    
     try {
  
-     psi = mem(y, psi, lambdaScale * lambdaList(i));
-      
+     newpsi = mem(y, oldpsi, lambdaScale * lambdaList(i));
+
       //if (verbose) 
         //Rcpp::Rcout << "Estimate: \n" << invTransf(psi.theta, psi.sigma) << "\n\n";
    
     } catch (const char* error) {
       throw error;
     } 
+    
+    psi = newpsi;
    
     pii = Rcpp::wrap(psi.pii);
 
@@ -603,6 +605,61 @@ Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const Ve
     }
     
     estimates.push_back(thisEstimate);
+    
+    if (oldpsi.distance(newpsi) < delta) {
+      // Set all remaining thetas to the last computed theta
+      for (int j = i + 1; j < lambdaList.size(); j++) {
+        Rcpp::List thisEstimate;
+        Rcpp::List th(K);
+        Rcpp::NumericVector pii;
+        Rcpp::CharacterVector names(K);
+        
+        psi = newpsi;
+        
+        pii = Rcpp::wrap(psi.pii);
+        
+        transfTheta = invTransf(psi.theta, psi.sigma);
+        
+        for(k = 0; k < K; k++) {
+          std::ostringstream oss1;
+          oss1 << k + 1;
+          names[k] = "th" + oss1.str();
+          th[k]    = transfTheta.col(k);
+        }
+        
+        Rcpp::DataFrame theta(th);
+        theta.attr("names") = names;
+        
+        std::ostringstream oss;
+        oss << lambdaList(j);
+        
+        if (j == 0) {
+          thisEstimate["ck"] = ck;
+        }
+        
+        thisEstimate["lambda"] = lambdaList(j); 
+        finalgraph = graphrep(y,psi,graphmnn(psi.theta, m),wMatrix(y,psi), lambdaScale * lambdaList(j));
+        thisEstimate["graph"]  = finalgraph;
+        thisEstimate["order"]  = countClusters(finalgraph);
+        thisEstimate["pii"]    = pii;
+        
+        switch (modelIndex) {
+        case 1: thisEstimate["mu"]    = transfTheta;
+          thisEstimate["sigma"] = psi.sigma;
+          break;
+          
+        case 2: thisEstimate["mu"]    = transfTheta.row(0);
+          thisEstimate["sigma"] = transfTheta.row(1);
+          break;
+          
+        default: thisEstimate["theta"] = transfTheta;
+        }
+        
+        estimates.push_back(thisEstimate);
+      }
+      break; // Exit the loop since all thetas are the same from now on
+    } else oldpsi = newpsi;
+ 
   }
 
   return estimates;
