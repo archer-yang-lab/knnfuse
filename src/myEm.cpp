@@ -27,7 +27,6 @@ Psi mem(const MatrixXd&, const Psi&, double);
 Matrix<double, Dynamic, Dynamic> wMatrix(const MatrixXd& y, const Psi&);
 Psi mStep(const MatrixXd& , const Psi& , const MatrixXd& ,  const MatrixXd& , double );
 MatrixXd admm(const MatrixXd& , const Psi&, const MatrixXd&, const MatrixXd&, double );
-MatrixXd graphrep(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const MatrixXd& wMtx, double lambda);
 MatrixXd pgd(const MatrixXd&, const Psi&, const MatrixXd&, double lambda) ;
 bool uCheck(double u, const MatrixXd& y, const MatrixXd& oldEta, const MatrixXd& newEta, const MatrixXd& sigma, const VectorXd& wMtxSums);
 
@@ -192,13 +191,15 @@ Psi mem(const MatrixXd& y, const Psi& psi, double lambda) {
     //Rcpp::Rcout << "graph" << graph << "\n";
     oldEstimate = newEstimate;
     newEstimate = mStep(y, oldEstimate, graph, wMatrix(y, oldEstimate), lambda);
+    //Rcpp::Rcout << "diff" << oldEstimate.distance(newEstimate);
+    
   } while (counter++ < maxRep && oldEstimate.distance(newEstimate) >= epsilon);
-  
+  counter++;
   
   // if (verbose) {
   //   Rcpp::Rcout << "Total MEM iterations: " << counter << ".\n";
   // }
-  
+  // 
   return newEstimate;
 }
 
@@ -336,10 +337,15 @@ MatrixXd admm(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const Ma
   //Rcpp::Rcout << "Eta68" << Eta.col(5+K*7) << "Eta610" << Eta.col(5+K*9) << ".\n";
   //Rcpp::Rcout << "Eta68-Eta610" << Eta.col(5+K*7) - Eta.col(5+K*9); 
   //Rcpp::Rcout << "Eta97-Eta98" << Eta(0,8+K*6)-Eta(0,8+K*7);
+  for(k = 0; k < K; k++) {
+    for(j = 0; j < K; j++){
+      if (graph(k,j)==1){
+        newTheta.col(k) = Eta.col(k+K*j);
+        }}}
   return newTheta;
 }
 
-MatrixXd graphrep(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const MatrixXd& wMtx, double lambda){
+int freq(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const MatrixXd& wMtx, double lambda){
   int k,j, counter = 0;
   MatrixXd newTheta = MatrixXd::Zero(D, K), 
     oldTheta(D, K), 
@@ -392,7 +398,7 @@ MatrixXd graphrep(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, cons
         phi(k,j) = 0;
       }
       }}
-  return phi;
+  return countClusters(phi);
 }
 
 // Proximal Gradient Descent Algorithm. 
@@ -526,9 +532,9 @@ double logLikFunction(const MatrixXd& y, const Psi& psi){
 }
 
 Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const VectorXd& lambdaList){
-  Psi psi = startingVals, oldpsi = startingVals, newpsi;
+  Psi psi = startingVals, minPsi;
   int i, k;
-  MatrixXd transfTheta,finalgraph;
+  MatrixXd transfTheta;
   
   Rcpp::List estimates;
   Rcpp::NumericVector rbicVals, orders, loglikVals;
@@ -549,12 +555,12 @@ Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const Ve
     Rcpp::NumericVector pii;
     Rcpp::CharacterVector names(K);
 
-    //if (verbose) 
-      //Rcpp::Rcout << "Lambda " << lambdaList(i) << ".\n";
-    
+    if (verbose) 
+      Rcpp::Rcout << "Lambda " << lambdaList(i) << ".\n";
+
     try {
  
-     newpsi = mem(y, oldpsi, lambdaScale * lambdaList(i));
+     psi = mem(y, psi, lambdaScale * lambdaList(i));
 
       //if (verbose) 
         //Rcpp::Rcout << "Estimate: \n" << invTransf(psi.theta, psi.sigma) << "\n\n";
@@ -562,8 +568,6 @@ Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const Ve
     } catch (const char* error) {
       throw error;
     } 
-    
-    psi = newpsi;
    
     pii = Rcpp::wrap(psi.pii);
 
@@ -587,9 +591,7 @@ Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const Ve
     }
 
     thisEstimate["lambda"] = lambdaList(i); 
-    finalgraph = graphrep(y,psi,graphmnn(psi.theta, m),wMatrix(y,psi), lambdaScale * lambdaList(i));
-    thisEstimate["graph"]  = finalgraph;
-    thisEstimate["order"]  = countClusters(finalgraph);
+    thisEstimate["order"]  = freq(y,psi,graphmnn(psi.theta, m),wMatrix(y,psi), lambdaScale * lambdaList(i));
     thisEstimate["pii"]    = pii;
 
     switch (modelIndex) {
@@ -605,61 +607,6 @@ Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const Ve
     }
     
     estimates.push_back(thisEstimate);
-    
-    if (oldpsi.distance(newpsi) < delta) {
-      // Set all remaining thetas to the last computed theta
-      for (int j = i + 1; j < lambdaList.size(); j++) {
-        Rcpp::List thisEstimate;
-        Rcpp::List th(K);
-        Rcpp::NumericVector pii;
-        Rcpp::CharacterVector names(K);
-        
-        psi = newpsi;
-        
-        pii = Rcpp::wrap(psi.pii);
-        
-        transfTheta = invTransf(psi.theta, psi.sigma);
-        
-        for(k = 0; k < K; k++) {
-          std::ostringstream oss1;
-          oss1 << k + 1;
-          names[k] = "th" + oss1.str();
-          th[k]    = transfTheta.col(k);
-        }
-        
-        Rcpp::DataFrame theta(th);
-        theta.attr("names") = names;
-        
-        std::ostringstream oss;
-        oss << lambdaList(j);
-        
-        if (j == 0) {
-          thisEstimate["ck"] = ck;
-        }
-        
-        thisEstimate["lambda"] = lambdaList(j); 
-        finalgraph = graphrep(y,psi,graphmnn(psi.theta, m),wMatrix(y,psi), lambdaScale * lambdaList(j));
-        thisEstimate["graph"]  = finalgraph;
-        thisEstimate["order"]  = countClusters(finalgraph);
-        thisEstimate["pii"]    = pii;
-        
-        switch (modelIndex) {
-        case 1: thisEstimate["mu"]    = transfTheta;
-          thisEstimate["sigma"] = psi.sigma;
-          break;
-          
-        case 2: thisEstimate["mu"]    = transfTheta.row(0);
-          thisEstimate["sigma"] = transfTheta.row(1);
-          break;
-          
-        default: thisEstimate["theta"] = transfTheta;
-        }
-        
-        estimates.push_back(thisEstimate);
-      }
-      break; // Exit the loop since all thetas are the same from now on
-    } else oldpsi = newpsi;
- 
   }
 
   return estimates;
