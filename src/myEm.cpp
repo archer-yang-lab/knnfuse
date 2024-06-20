@@ -33,6 +33,7 @@ Psi mem(const MatrixXd&, const Psi&, double);
 Matrix<double, Dynamic, Dynamic> wMatrix(const MatrixXd& y, const Psi&);
 Psi mStep(const MatrixXd& , const Psi& , const MatrixXd& ,  const MatrixXd& , double );
 MatrixXd admm(const MatrixXd& , const Psi&, const MatrixXd&, const MatrixXd&, double );
+<<<<<<< HEAD
 MatrixXd graphrep(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const MatrixXd& wMtx, double lambda);
 Psi mem2(const MatrixXd&, const Psi&, double, const VectorXd&);
 Matrix<double, Dynamic, Dynamic> wMatrix1(const MatrixXd& y, const Psi&, const VectorXd&);
@@ -42,6 +43,10 @@ Psi mStep2(const MatrixXd& , const Psi& , const MatrixXd& ,  const MatrixXd& ,co
 MatrixXd graphrep2(const MatrixXd&, const Psi&, const MatrixXd& , const MatrixXd&,const MatrixXd&, double , const VectorXd&);
 //MatrixXd pgd(const MatrixXd&, const Psi&, const MatrixXd&, double lambda) ;
 //bool uCheck(double u, const MatrixXd& y, const MatrixXd& oldEta, const MatrixXd& newEta, const MatrixXd& sigma, const VectorXd& wMtxSums);
+=======
+MatrixXd pgd(const MatrixXd&, const Psi&, const MatrixXd&, double lambda) ;
+bool uCheck(double u, const MatrixXd& y, const MatrixXd& oldEta, const MatrixXd& newEta, const MatrixXd& sigma, const VectorXd& wMtxSums);
+>>>>>>> 1e6532e6e2e593a01078a6c10d296f395430d9cb
 
 
 // [[Rcpp::export(.myEm)]]
@@ -204,13 +209,23 @@ Psi mem(const MatrixXd& y, const Psi& psi, double lambda) {
     //Rcpp::Rcout << "graph" << graph << "\n";
     oldEstimate = newEstimate;
     newEstimate = mStep(y, oldEstimate, graph, wMatrix(y, oldEstimate), lambda);
+    //Rcpp::Rcout << "diff" << oldEstimate.distance(newEstimate);
+    
   } while (counter++ < maxRep && oldEstimate.distance(newEstimate) >= epsilon);
+  counter++;
   
+<<<<<<< HEAD
   
   if (verbose) {
     //Rcpp::Rcout << "Total MEM iterations: " << counter << ".\n";
   }
   
+=======
+  // if (verbose) {
+  //   Rcpp::Rcout << "Total MEM iterations: " << counter << ".\n";
+  // }
+  // 
+>>>>>>> 1e6532e6e2e593a01078a6c10d296f395430d9cb
   return newEstimate;
 }
 
@@ -343,6 +358,7 @@ MatrixXd admm(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const Ma
 
     oldU=newU;
   } while (counter++ < maxadmm && (oldTheta - newTheta).norm() > delta);
+<<<<<<< HEAD
   } else if (lambda > 0 && penalty == 3){
     do {
       oldTheta = newTheta ; 
@@ -375,6 +391,22 @@ MatrixXd admm(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const Ma
 MatrixXd graphrep(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const MatrixXd& wMtx, double lambda){
   int K = psi.theta.cols();  // Number of mixture components. 
   int D = psi.theta.rows();  // Dimension of the parameter space.
+=======
+  //Rcpp::Rcout << "Theta" << newTheta.row(0) << ".\n";
+  //Rcpp::Rcout << "Phi" << phi << ".\n";
+  //Rcpp::Rcout << "Eta68" << Eta.col(5+K*7) << "Eta610" << Eta.col(5+K*9) << ".\n";
+  //Rcpp::Rcout << "Eta68-Eta610" << Eta.col(5+K*7) - Eta.col(5+K*9); 
+  //Rcpp::Rcout << "Eta97-Eta98" << Eta(0,8+K*6)-Eta(0,8+K*7);
+  for(k = 0; k < K; k++) {
+    for(j = 0; j < K; j++){
+      if (graph(k,j)==1){
+        newTheta.col(k) = Eta.col(k+K*j);
+        }}}
+  return newTheta;
+}
+
+int freq(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, const MatrixXd& wMtx, double lambda){
+>>>>>>> 1e6532e6e2e593a01078a6c10d296f395430d9cb
   int k,j, counter = 0;
   MatrixXd newTheta = MatrixXd::Zero(D, K), 
     oldTheta(D, K), 
@@ -427,7 +459,7 @@ MatrixXd graphrep(const MatrixXd& y, const Psi& psi, const MatrixXd& graph, cons
         phi(k,j) = 0;
       }
       }}
-  return phi;
+  return countClusters(phi);
 }
 
 
@@ -454,9 +486,15 @@ double logLikFunction(const MatrixXd& y, const Psi& psi){
 }
 
 Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const VectorXd& lambdaList){
+<<<<<<< HEAD
   Psi newpsi, psi = startingVals;
   int i, k, numComponents;
   
+=======
+  Psi psi = startingVals, minPsi;
+  int i, k;
+  MatrixXd transfTheta;
+>>>>>>> 1e6532e6e2e593a01078a6c10d296f395430d9cb
   
   Rcpp::List estimates;
   Rcpp::NumericVector rbicVals, orders, loglikVals;
@@ -471,6 +509,7 @@ Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const Ve
     Rcpp::NumericVector pii;
     Rcpp::CharacterVector names(K);
 
+<<<<<<< HEAD
     if(penalty == 3) {
       adaptiveLassoWeights = MatrixXd::Zero(K,K);
       psi = mem(y, psi, alStart);
@@ -482,6 +521,15 @@ Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const Ve
     
     if(K >=2){
     try {
+=======
+    if (verbose) 
+      Rcpp::Rcout << "Lambda " << lambdaList(i) << ".\n";
+
+    try {
+ 
+     psi = mem(y, psi, lambdaScale * lambdaList(i));
+
+>>>>>>> 1e6532e6e2e593a01078a6c10d296f395430d9cb
       //if (verbose) 
         //Rcpp::Rcout << "Estimate: \n" << invTransf(psi.theta, psi.sigma) << "\n\n";
      
@@ -525,8 +573,12 @@ Rcpp::List estimateSequence(const MatrixXd& y, const Psi& startingVals, const Ve
     }
 
     thisEstimate["lambda"] = lambdaList(i); 
+<<<<<<< HEAD
     thisEstimate["graph"]  = finalgraph;
     thisEstimate["order"]  = numComponents;
+=======
+    thisEstimate["order"]  = freq(y,psi,graphmnn(psi.theta, m),wMatrix(y,psi), lambdaScale * lambdaList(i));
+>>>>>>> 1e6532e6e2e593a01078a6c10d296f395430d9cb
     thisEstimate["pii"]    = pii;
 
     switch (modelIndex) {
