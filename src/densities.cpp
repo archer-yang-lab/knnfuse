@@ -46,6 +46,58 @@ int dfNormalLoc (int k, bool arbSigma) {
   return (k * (D+1) -1);
 }
 
+/*** Multivariate Location T auxiliary functions begin. ***/
+
+
+double densityT (const Matrix<double, 1, Dynamic>& y,   
+                         const Matrix<double, Dynamic, 1>& theta,   
+                         const MatrixXd& sigma, const double nu) {
+  double d1 = y * theta;
+  double d2 = theta.transpose() * sigma.transpose() * theta;
+  double d3 = y * sigma.inverse() * y.transpose();
+  double result;
+  
+  int D = theta.rows();
+  double vp=0.5*(nu+D);
+  
+  result = std::tgamma(vp)*pow((1+( -2*d1 + d2 + d3)/nu),-vp) / (std::tgamma(nu/2) * sqrt( fabs( ( nu * M_PI * sigma).determinant()))) ; 
+  //Rcpp::Rcout << "densityT" << result;
+  return result;
+  }
+
+MatrixXd gradBT (const MatrixXd& theta, const MatrixXd& sigma) {
+  return (sigma + sigma.transpose()) * theta / 2.0; 
+}
+
+double bT (const VectorXd& theta, const MatrixXd& sigma) {
+  return 0.5 * theta.transpose() * sigma * theta;
+}
+
+MatrixXd tT (const MatrixXd& y) {
+  return y;
+}
+
+MatrixXd transfT (const MatrixXd& theta, const MatrixXd& sigma) {
+  return sigma.inverse() * theta;
+}
+
+MatrixXd invTransfT (const MatrixXd& theta, const MatrixXd& sigma) {
+  return sigma * theta;
+}
+
+bool constrCheckT (const MatrixXd& theta) {
+  return true;
+}
+
+int dfT (int k, bool arbSigma) {
+  if (arbSigma) {
+    return (k * (D+1) - 1 + D*(D+1)/2);
+  }
+  
+  return (k * (D+1) -1);
+}
+
+
 /*** Multinomial auxiliary functions begin. ***/
 
 double densityMultinomial(const Matrix<double, 1, Dynamic>& y,
@@ -69,6 +121,7 @@ double densityMultinomial(const Matrix<double, 1, Dynamic>& y,
 }
 
 MatrixXd transfMultinomial (const MatrixXd& theta) {
+  int K = theta.cols();
   MatrixXd out(D, K);
   int j, k;
   double temp;
@@ -175,68 +228,5 @@ double bMultinomial (const VectorXd& theta, const MatrixXd& sigma) {
 bool constrCheckMultinomial (const MatrixXd& theta) {
   return true;
 }
-
-/*** Poisson auxiliary functions begin. ***/
-
-// Helper.
-int factorial (int n) { return (n == 1 || n == 0) ? 1 : n * factorial(n - 1);}
-
-double densityPoisson (const Matrix<double, 1, Dynamic>& y, const Matrix<double, Dynamic, 1>& theta, const MatrixXd& sigma) {
-  return exp(theta(0, 0) * y(0, 0) - exp(theta(0, 0))) / (factorial(y(0, 0)));
-}
-
-double bPoisson (const VectorXd& theta, const MatrixXd& sigma) {
-  return exp(theta(0, 0));
-}
-
-MatrixXd gradBPoisson (const MatrixXd& theta, const MatrixXd& sigma) {
-  return theta.array().exp();
-}
-
-MatrixXd transfPoisson (const MatrixXd& theta) {
-  return theta.array().log();
-}
-
-MatrixXd invTransfPoisson (const MatrixXd& theta, const MatrixXd& sigma) {
-  return theta.array().exp();
-}
-
-MatrixXd tPoisson (const MatrixXd& y) {
-  return y;
-}
-
-bool constrCheckPoisson (const MatrixXd& theta) {
-  return true;
-}
-
-/*** Exponential distribution auxiliary functions begin.  ***/
-double densityExponential (const Matrix<double, 1, Dynamic>& y, const Matrix<double, Dynamic, 1>& theta, const MatrixXd& sigma) {
-  return exp(theta(0, 0) * y(0, 0) + log(-theta(0, 0)));
-}
-
-double bExponential (const VectorXd& theta, const MatrixXd& sigma) {
-  return - log( - theta(0, 0));
-}
-
-MatrixXd gradBExponential (const MatrixXd& theta, const MatrixXd& sigma) {
-  return - theta.array().inverse();
-}
-
-MatrixXd transfExponential (const MatrixXd& theta) {
-  return -theta;
-}
-
-MatrixXd invTransfExponential (const MatrixXd& theta, const MatrixXd& sigma) {
-  return -theta;
-}
-
-MatrixXd tExponential (const MatrixXd& y) {
-  return y;
-}
-
-bool constrCheckExponential (const MatrixXd& theta) {
-  return true;
-}
-
 
 

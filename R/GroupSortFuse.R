@@ -5,10 +5,8 @@
 #' maximum likelihood estimation. The method is implemented for the following classes of mixture models,
 #' \itemize{
 #'   \item{Location-Gaussian mixture models, with unknown or known covariance (\code{normalLocOrder})}
+#'   \item{Location-t mixture models, with unknown or known covariance (\code{tLocOrder})}
 #'   \item{Multinomial mixture models (\code{multinomialOrder})}
-#'   \item{Poisson mixture models (\code{poissonOrder})}
-#'   \item{Exponential distribution mixture models (\code{exponentialOrder})}}
-#' This package also provides coefficient path plotting functionality (\code{plot.gsf}).
 #' Tuning parameter selection can be performed using the Bayesian Information
 #' Criterion (\code{bicTuning}) or V-fold Cross Validation (\code{cvTuning}). 
 #'
@@ -16,5 +14,5 @@
 #'  Manole, T., Khalili, A. 2019. "Estimating the Number of Components in Finite Mixture Models 
 #'  via the Group-Sort-Fuse Procedure".
 #' 
-#' @name GroupSortFuse2-package
+#' @name knnfuse-package
 NULL

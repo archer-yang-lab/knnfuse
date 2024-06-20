@@ -1,4 +1,4 @@
-Package: GroupSortFuse2
+Package: knnfuse6
 Type: Package
 Title: Estimating the Number of Components in Finite Mixture Models
 Version: 1.0

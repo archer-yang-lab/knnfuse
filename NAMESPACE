@@ -1,4 +1,4 @@
-useDynLib(GroupSortFuse2)
+useDynLib(knnfuse6)
 exportPattern("^[[:alpha:]]+")
 importFrom(Rcpp, evalCpp)
 importFrom("graphics", "axis", "matplot", "par", "title")

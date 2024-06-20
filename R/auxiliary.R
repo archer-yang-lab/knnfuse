@@ -2,7 +2,7 @@
   if (pen == "SCAD") 1
   else if (pen == "MCP") 2
   else if (pen == "ADAPTIVE-LASSO") 3
-  else if (pen == "SCAD-LLA") 4
+  else if (pen == "UNWEIGHTED") 4
   else if (pen == "MCP-LLA") 5
   else 0
 }
@@ -177,5 +177,16 @@
 
   if (!is.null(mu) && (any(is.na(mu)) || any(is.infinite(mu))))
     stop("Error: 'mu' cannot contain missing or infinite values.")
+}
+
+rmvnorm <- function (n, mu, Sigma){
+  stopifnot(Sigma==t(Sigma))
+  if(prod(diag(diag(Sigma))==Sigma)) Sigma.sqrt <- sqrt(Sigma)
+  else {
+    dc <- eigen(Sigma)
+    Sigma.sqrt <- dc$vectors%*%diag(sqrt(dc$values))%*%t(dc$vectors)
+  }
+  
+  return(mu + Sigma.sqrt%*%rnorm(length(mu)))
 }
 
